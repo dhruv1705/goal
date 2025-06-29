@@ -1,20 +1,62 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react'
+import { StatusBar } from 'expo-status-bar'
+import { NavigationContainer } from '@react-navigation/native'
+import { createStackNavigator } from '@react-navigation/stack'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { LoginScreen } from './screens/LoginScreen'
+import { SignUpScreen } from './screens/SignUpScreen'
+import { ScheduleScreen } from './screens/ScheduleScreen'
+import { AddEditScheduleScreen } from './screens/AddEditScheduleScreen'
+import { View, ActivityIndicator, StyleSheet } from 'react-native'
+
+const Stack = createStackNavigator()
+
+const AuthStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="Login" component={LoginScreen} />
+    <Stack.Screen name="SignUp" component={SignUpScreen} />
+  </Stack.Navigator>
+)
+
+const MainStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="Schedule" component={ScheduleScreen} />
+    <Stack.Screen name="AddEdit" component={AddEditScheduleScreen} />
+  </Stack.Navigator>
+)
+
+const AppNavigator = () => {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    )
+  }
+
+  return (
+    <NavigationContainer>
+      {user ? <MainStack /> : <AuthStack />}
+    </NavigationContainer>
+  )
+}
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
+    <AuthProvider>
+      <AppNavigator />
       <StatusBar style="auto" />
-    </View>
-  );
+    </AuthProvider>
+  )
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loadingContainer: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
   },
-});
+})

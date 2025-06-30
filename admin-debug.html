@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel Debug</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        .success { border-color: #10b981; background-color: #f0fdf4; }
+        .error { border-color: #ef4444; background-color: #fef2f2; }
+        .loading { border-color: #f59e0b; background-color: #fffbeb; }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        button {
+            background: #7C3AED;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #6D28D9; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Admin Panel Debug Tool</h1>
+        <p>This tool will help diagnose why your admin panel shows zero data.</p>
+
+        <div id="connectionTest" class="test-section loading">
+            <h3>1. Testing Supabase Connection</h3>
+            <p id="connectionStatus">Testing connection...</p>
+        </div>
+
+        <div id="tablesTest" class="test-section loading">
+            <h3>2. Checking Database Tables</h3>
+            <p id="tablesStatus">Checking tables...</p>
+            <pre id="tablesResult"></pre>
+        </div>
+
+        <div id="dataTest" class="test-section loading">
+            <h3>3. Checking Data in Tables</h3>
+            <p id="dataStatus">Checking data...</p>
+            <pre id="dataResult"></pre>
+        </div>
+
+        <div id="permissionsTest" class="test-section loading">
+            <h3>4. Testing Permissions</h3>
+            <p id="permissionsStatus">Testing permissions...</p>
+            <pre id="permissionsResult"></pre>
+        </div>
+
+        <div class="test-section">
+            <h3>5. Quick Actions</h3>
+            <button onclick="insertTestData()">Insert Test Data</button>
+            <button onclick="checkRLSPolicies()">Check RLS Policies</button>
+            <button onclick="runFullDiagnostic()">Run Full Diagnostic</button>
+        </div>
+
+        <div id="testDataSection" class="test-section" style="display: none;">
+            <h3>6. Test Data Results</h3>
+            <pre id="testDataResult"></pre>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase with your credentials
+        const supabaseUrl = 'https://ebdvpahpuefimdcfuvru.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViZHZwYWhwdWVmaW1kY2Z1dnJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMjM5NTMsImV4cCI6MjA2Njc5OTk1M30.8V52GocdThP5StIJ5ImZL3PwXPD8QWkJsj465QA2vI4'
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
+
+        async function testConnection() {
+            try {
+                // Test basic connection
+                const { data, error } = await supabase.from('goals').select('count', { count: 'exact', head: true })
+                
+                if (error) throw error
+                
+                document.getElementById('connectionTest').className = 'test-section success'
+                document.getElementById('connectionStatus').textContent = '✅ Connection successful!'
+                return true
+            } catch (error) {
+                document.getElementById('connectionTest').className = 'test-section error'
+                document.getElementById('connectionStatus').textContent = '❌ Connection failed: ' + error.message
+                return false
+            }
+        }
+
+        async function checkTables() {
+            const tables = ['goals', 'schedules']
+            const results = {}
+            
+            for (const table of tables) {
+                try {
+                    const { data, error, count } = await supabase
+                        .from(table)
+                        .select('*', { count: 'exact', head: true })
+                    
+                    if (error) throw error
+                    
+                    results[table] = {
+                        exists: true,
+                        count: count || 0,
+                        error: null
+                    }
+                } catch (error) {
+                    results[table] = {
+                        exists: false,
+                        count: 0,
+                        error: error.message
+                    }
+                }
+            }
+            
+            document.getElementById('tablesTest').className = 'test-section success'
+            document.getElementById('tablesStatus').textContent = '✅ Table check complete'
+            document.getElementById('tablesResult').textContent = JSON.stringify(results, null, 2)
+            
+            return results
+        }
+
+        async function checkData() {
+            try {
+                // Check goals table
+                const { data: goals, error: goalsError } = await supabase
+                    .from('goals')
+                    .select('*')
+                    .limit(5)
+                
+                if (goalsError) throw goalsError
+
+                // Check schedules table
+                const { data: schedules, error: schedulesError } = await supabase
+                    .from('schedules')
+                    .select('*')
+                    .limit(5)
+                
+                if (schedulesError) throw schedulesError
+
+                const result = {
+                    goals: {
+                        count: goals.length,
+                        sample: goals.slice(0, 2)
+                    },
+                    schedules: {
+                        count: schedules.length,
+                        sample: schedules.slice(0, 2)
+                    }
+                }
+                
+                document.getElementById('dataTest').className = 'test-section success'
+                document.getElementById('dataStatus').textContent = `✅ Found ${goals.length} goals, ${schedules.length} schedules`
+                document.getElementById('dataResult').textContent = JSON.stringify(result, null, 2)
+                
+                return result
+            } catch (error) {
+                document.getElementById('dataTest').className = 'test-section error'
+                document.getElementById('dataStatus').textContent = '❌ Data check failed: ' + error.message
+                document.getElementById('dataResult').textContent = error.message
+                return null
+            }
+        }
+
+        async function testPermissions() {
+            const tests = []
+            
+            // Test SELECT permission
+            try {
+                const { data, error } = await supabase.from('goals').select('id').limit(1)
+                tests.push({ operation: 'SELECT goals', success: !error, error: error?.message })
+            } catch (error) {
+                tests.push({ operation: 'SELECT goals', success: false, error: error.message })
+            }
+            
+            // Test INSERT permission (with rollback)
+            try {
+                const { data, error } = await supabase.from('goals').insert({
+                    title: 'Test Goal - DELETE ME',
+                    user_id: '00000000-0000-0000-0000-000000000000' // fake UUID for test
+                })
+                tests.push({ operation: 'INSERT goals', success: !error, error: error?.message })
+                
+                // Clean up test data if insert succeeded
+                if (!error && data) {
+                    await supabase.from('goals').delete().eq('title', 'Test Goal - DELETE ME')
+                }
+            } catch (error) {
+                tests.push({ operation: 'INSERT goals', success: false, error: error.message })
+            }
+            
+            document.getElementById('permissionsTest').className = 'test-section success'
+            document.getElementById('permissionsStatus').textContent = '✅ Permission tests complete'
+            document.getElementById('permissionsResult').textContent = JSON.stringify(tests, null, 2)
+            
+            return tests
+        }
+
+        async function insertTestData() {
+            document.getElementById('testDataSection').style.display = 'block'
+            document.getElementById('testDataResult').textContent = 'Inserting test data...'
+            
+            try {
+                // Generate a fake user ID for testing
+                const testUserId = 'test-user-' + Date.now()
+                
+                // Insert test goal
+                const { data: goalData, error: goalError } = await supabase
+                    .from('goals')
+                    .insert({
+                        user_id: testUserId,
+                        title: 'Test Goal from Admin Panel',
+                        description: 'This is a test goal created from the admin panel debug tool',
+                        status: 'active',
+                        category: 'Testing'
+                    })
+                    .select()
+                
+                if (goalError) throw goalError
+                
+                // Insert test schedule
+                const { data: scheduleData, error: scheduleError } = await supabase
+                    .from('schedules')
+                    .insert({
+                        user_id: testUserId,
+                        title: 'Test Schedule from Admin Panel',
+                        schedule_date: new Date().toISOString().split('T')[0],
+                        schedule_time: '10:00:00',
+                        completed: false
+                    })
+                    .select()
+                
+                if (scheduleError) throw scheduleError
+                
+                const result = {
+                    success: true,
+                    goalCreated: goalData,
+                    scheduleCreated: scheduleData,
+                    message: 'Test data inserted successfully! Refresh your admin panel to see the data.'
+                }
+                
+                document.getElementById('testDataResult').textContent = JSON.stringify(result, null, 2)
+                
+            } catch (error) {
+                document.getElementById('testDataResult').textContent = 'Error inserting test data: ' + error.message
+            }
+        }
+
+        async function checkRLSPolicies() {
+            alert('RLS Policy check requires admin access to your Supabase dashboard. Check the policies section in your Supabase project.')
+        }
+
+        async function runFullDiagnostic() {
+            document.getElementById('connectionStatus').textContent = 'Running full diagnostic...'
+            
+            await testConnection()
+            await new Promise(resolve => setTimeout(resolve, 500))
+            
+            await checkTables()
+            await new Promise(resolve => setTimeout(resolve, 500))
+            
+            await checkData()
+            await new Promise(resolve => setTimeout(resolve, 500))
+            
+            await testPermissions()
+        }
+
+        // Auto-run tests on page load
+        window.addEventListener('load', runFullDiagnostic)
+    </script>
+</body>
+</html>

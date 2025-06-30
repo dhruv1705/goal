@@ -34,13 +34,14 @@ export type Database = {
   }
   public: {
     Tables: {
-      schedules: {
+      goals: {
         Row: {
           created_at: string
           description: string | null
           id: string
-          schedule_date: string
-          schedule_time: string
+          status: 'active' | 'completed' | 'paused'
+          category: string | null
+          target_date: string | null
           title: string
           updated_at: string
           user_id: string
@@ -49,8 +50,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
-          schedule_date: string
-          schedule_time: string
+          status?: 'active' | 'completed' | 'paused'
+          category?: string | null
+          target_date?: string | null
           title: string
           updated_at?: string
           user_id: string
@@ -59,13 +61,79 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          status?: 'active' | 'completed' | 'paused'
+          category?: string | null
+          target_date?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      schedules: {
+        Row: {
+          completed: boolean
+          created_at: string
+          description: string | null
+          goal_id: string | null
+          id: string
+          is_recurring: boolean
+          recurrence_type: 'daily' | 'weekly' | 'monthly' | 'yearly' | null
+          recurrence_interval: number | null
+          recurrence_end_date: string | null
+          parent_task_id: string | null
+          priority: 'high' | 'medium' | 'low'
+          schedule_date: string
+          schedule_time: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          description?: string | null
+          goal_id?: string | null
+          id?: string
+          is_recurring?: boolean
+          recurrence_type?: 'daily' | 'weekly' | 'monthly' | 'yearly' | null
+          recurrence_interval?: number | null
+          recurrence_end_date?: string | null
+          parent_task_id?: string | null
+          priority?: 'high' | 'medium' | 'low'
+          schedule_date: string
+          schedule_time: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          description?: string | null
+          goal_id?: string | null
+          id?: string
+          is_recurring?: boolean
+          recurrence_type?: 'daily' | 'weekly' | 'monthly' | 'yearly' | null
+          recurrence_interval?: number | null
+          recurrence_end_date?: string | null
+          parent_task_id?: string | null
+          priority?: 'high' | 'medium' | 'low'
           schedule_date?: string
           schedule_time?: string
           title?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "schedules_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {

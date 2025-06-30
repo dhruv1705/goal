@@ -7,6 +7,10 @@ import { LoginScreen } from './screens/LoginScreen'
 import { SignUpScreen } from './screens/SignUpScreen'
 import { ScheduleScreen } from './screens/ScheduleScreen'
 import { AddEditScheduleScreen } from './screens/AddEditScheduleScreen'
+import { ProfileScreen } from './screens/ProfileScreen'
+import { GoalsScreen } from './screens/GoalsScreen'
+import { AddEditGoalScreen } from './screens/AddEditGoalScreen'
+import { GoalDetailScreen } from './screens/GoalDetailScreen'
 import { View, ActivityIndicator, StyleSheet } from 'react-native'
 
 const Stack = createStackNavigator()
@@ -22,6 +26,10 @@ const MainStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="Schedule" component={ScheduleScreen} />
     <Stack.Screen name="AddEdit" component={AddEditScheduleScreen} />
+    <Stack.Screen name="Profile" component={ProfileScreen} />
+    <Stack.Screen name="Goals" component={GoalsScreen} />
+    <Stack.Screen name="AddEditGoal" component={AddEditGoalScreen} />
+    <Stack.Screen name="GoalDetail" component={GoalDetailScreen} />
   </Stack.Navigator>
 )
 

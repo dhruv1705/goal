@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="script.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <span class="time">10:47</span>
+            <div class="status-icons">
+                <span class="wifi">📶</span>
+                <span class="battery">52%🔋</span>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <header class="header">
+            <h1>Schedule</h1>
+        </header>
+
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-btn active">Day</button>
+            <button class="tab-btn">Week</button>
+            <button class="tab-btn">Month</button>
+        </div>
+
+        <!-- Date Navigation -->
+        <div class="date-navigation">
+            <button class="nav-arrow">&lt;</button>
+            <span class="current-date">29 Jun 2025</span>
+            <button class="nav-arrow">&gt;</button>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-number">2</div>
+                <div class="stat-label">Total Tasks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">0</div>
+                <div class="stat-label">Completed</div>
+            </div>
+        </div>
+
+        <!-- Task List -->
+        <div class="task-list">
+            <div class="task-item">
+                <div class="task-time">11:00</div>
+                <div class="task-content">
+                    <div class="task-accent physical"></div>
+                    <div class="task-details">
+                        <div class="task-title">Exercise</div>
+                        <div class="task-category">Physical</div>
+                    </div>
+                </div>
+            </div>
+            <div class="task-item">
+                <div class="task-time">12:00</div>
+                <div class="task-content">
+                    <div class="task-accent physical"></div>
+                    <div class="task-details">
+                        <div class="task-title">Protein-Rich Meal</div>
+                        <div class="task-category">Physical</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Action Button -->
+        <button class="fab">+</button>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <div class="nav-item">
+                <div class="nav-icon">🏠</div>
+                <div class="nav-label">Home</div>
+            </div>
+            <div class="nav-item">
+                <div class="nav-icon">🎯</div>
+                <div class="nav-label">Goals</div>
+            </div>
+            <div class="nav-item active">
+                <div class="nav-icon">📅</div>
+                <div class="nav-label">Schedule</div>
+            </div>
+            <div class="nav-item">
+                <div class="nav-icon">💬</div>
+                <div class="nav-label">Feedback</div>
+            </div>
+            <div class="nav-item">
+                <div class="nav-icon">👤</div>
+                <div class="nav-label">Profile</div>
+            </div>
+        </nav>
+    </div>
+</body>
+</html>

@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goals App - Admin Panel (Working)</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #1a1a1a;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.08);
+        }
+
+        .header h1 {
+            color: #7C3AED;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .config-section {
+            background: #FEF3C7;
+            border: 1px solid #F59E0B;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .config-section h3 {
+            color: #92400E;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.08);
+            border: 1px solid #f3f4f6;
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #7C3AED;
+            margin-bottom: 4px;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            color: #10B981;
+            font-weight: 500;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.08);
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.08);
+            height: fit-content;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 20px;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .status-active { background-color: #10B981; }
+        .status-completed { background-color: #7C3AED; }
+        .status-paused { background-color: #F59E0B; }
+
+        .category-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 500;
+            background-color: #E5E7EB;
+            color: #374151;
+        }
+
+        .btn {
+            background: #7C3AED;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background: #6D28D9;
+        }
+
+        .btn-success {
+            background: #10B981;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: #EF4444;
+        }
+
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #F0FDF4;
+            border: 1px solid #10B981;
+            color: #065F46;
+        }
+
+        .alert-error {
+            background: #FEF2F2;
+            border: 1px solid #EF4444;
+            color: #991B1B;
+        }
+
+        .alert-warning {
+            background: #FFFBEB;
+            border: 1px solid #F59E0B;
+            color: #92400E;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #7C3AED;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden { display: none; }
+
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Goals App Admin Panel (Working Solution)</h1>
+            <p>Complete admin access with service role configuration</p>
+        </div>
+
+        <!-- Configuration Section -->
+        <div class="config-section">
+            <h3>🔧 Admin Configuration Required</h3>
+            <p>To access all data, you need to provide your Supabase <strong>service_role</strong> key (not the anon key). This bypasses RLS and gives full admin access.</p>
+            
+            <div class="form-group">
+                <label>Supabase URL:</label>
+                <input type="text" id="supabaseUrl" value="https://ebdvpahpuefimdcfuvru.supabase.co" readonly>
+            </div>
+            
+            <div class="form-group">
+                <label>Service Role Key (from Supabase Dashboard > Settings > API):</label>
+                <input type="password" id="serviceKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+            </div>
+            
+            <button class="btn btn-success" onclick="connectWithServiceRole()">Connect with Service Role</button>
+            <button class="btn" onclick="useAnonKeyFallback()">Use Anon Key (Limited)</button>
+            
+            <div style="margin-top: 15px; font-size: 13px; color: #6B7280;">
+                <strong>How to get Service Role Key:</strong><br>
+                1. Go to your Supabase project dashboard<br>
+                2. Navigate to Settings → API<br>
+                3. Copy the "service_role" key (not the "anon" key)<br>
+                4. Paste it above and click "Connect with Service Role"
+            </div>
+        </div>
+
+        <!-- Alert Messages -->
+        <div id="alertContainer"></div>
+
+        <!-- Dashboard Content -->
+        <div id="dashboardContent" class="hidden">
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <h3>Total Users</h3>
+                    <div class="stat-number" id="totalUsers">-</div>
+                    <div class="stat-change" id="userGrowth">Loading...</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Goals</h3>
+                    <div class="stat-number" id="totalGoals">-</div>
+                    <div class="stat-change" id="goalGrowth">Loading...</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Completed Goals</h3>
+                    <div class="stat-number" id="completedGoals">-</div>
+                    <div class="stat-change" id="completionRate">Loading...</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Active Schedules</h3>
+                    <div class="stat-number" id="activeSchedules">-</div>
+                    <div class="stat-change" id="scheduleInfo">Loading...</div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <button class="btn btn-success" onclick="createSampleData()">Create Sample Data</button>
+                <button class="btn" onclick="refreshDashboard()">Refresh Data</button>
+                <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+            </div>
+
+            <div class="content-grid">
+                <div class="main-content">
+                    <h2 class="section-title">Recent Goals</h2>
+                    <div id="goalsLoading" class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading goals data...</p>
+                    </div>
+                    <table class="table hidden" id="goalsTable">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>User ID</th>
+                                <th>Category</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody id="goalsTableBody">
+                        </tbody>
+                    </table>
+                    <div id="goalsEmpty" class="hidden">
+                        <p style="text-align: center; color: #666; padding: 40px;">
+                            No goals found. <button class="btn btn-success" onclick="createSampleData()">Create Sample Data</button>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="sidebar">
+                    <h2 class="section-title">Database Status</h2>
+                    <div id="dbStatus">
+                        <div style="margin-bottom: 15px;">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Connection Status</div>
+                            <div id="connectionStatus" style="font-size: 14px; font-weight: 600;">Checking...</div>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Access Level</div>
+                            <div id="accessLevel" style="font-size: 14px; font-weight: 600;">Checking...</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Last Updated</div>
+                            <div id="lastUpdated" style="font-size: 14px; font-weight: 600;">-</div>
+                        </div>
+                    </div>
+
+                    <h2 class="section-title" style="margin-top: 30px;">Quick Actions</h2>
+                    <div>
+                        <button class="btn" onclick="testConnection()" style="width: 100%; margin-bottom: 10px;">Test Connection</button>
+                        <button class="btn" onclick="viewRawData()" style="width: 100%; margin-bottom: 10px;">View Raw Data</button>
+                        <button class="btn" onclick="exportData()" style="width: 100%;">Export Data</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let supabase = null
+        let isServiceRole = false
+
+        function showAlert(message, type = 'success') {
+            const alertContainer = document.getElementById('alertContainer')
+            const alertDiv = document.createElement('div')
+            alertDiv.className = `alert alert-${type}`
+            alertDiv.innerHTML = message
+            alertContainer.appendChild(alertDiv)
+            
+            setTimeout(() => {
+                alertDiv.remove()
+            }, 5000)
+        }
+
+        function connectWithServiceRole() {
+            const serviceKey = document.getElementById('serviceKey').value.trim()
+            const supabaseUrl = document.getElementById('supabaseUrl').value.trim()
+            
+            if (!serviceKey) {
+                showAlert('Please enter your service role key', 'error')
+                return
+            }
+            
+            try {
+                supabase = window.supabase.createClient(supabaseUrl, serviceKey)
+                isServiceRole = true
+                
+                showAlert('Connected with service role! Loading dashboard...', 'success')
+                document.getElementById('dashboardContent').classList.remove('hidden')
+                
+                // Update status
+                document.getElementById('connectionStatus').textContent = '✅ Connected'
+                document.getElementById('connectionStatus').style.color = '#10B981'
+                document.getElementById('accessLevel').textContent = '🔓 Full Admin Access'
+                document.getElementById('accessLevel').style.color = '#10B981'
+                
+                loadDashboard()
+                
+            } catch (error) {
+                showAlert('Failed to connect with service role: ' + error.message, 'error')
+            }
+        }
+
+        function useAnonKeyFallback() {
+            const supabaseUrl = document.getElementById('supabaseUrl').value.trim()
+            const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViZHZwYWhwdWVmaW1kY2Z1dnJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMjM5NTMsImV4cCI6MjA2Njc5OTk1M30.8V52GocdThP5StIJ5ImZL3PwXPD8QWkJsj465QA2vI4'
+            
+            supabase = window.supabase.createClient(supabaseUrl, anonKey)
+            isServiceRole = false
+            
+            showAlert('Connected with anon key (limited access due to RLS)', 'warning')
+            document.getElementById('dashboardContent').classList.remove('hidden')
+            
+            // Update status
+            document.getElementById('connectionStatus').textContent = '⚠️ Limited Connection'
+            document.getElementById('connectionStatus').style.color = '#F59E0B'
+            document.getElementById('accessLevel').textContent = '🔒 RLS Restricted'
+            document.getElementById('accessLevel').style.color = '#F59E0B'
+            
+            loadDashboard()
+        }
+
+        async function loadDashboard() {
+            try {
+                document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString()
+                
+                // Load goals
+                const { data: goals, error: goalsError } = await supabase
+                    .from('goals')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                
+                if (goalsError && !isServiceRole) {
+                    console.log('Goals query failed (expected with RLS):', goalsError.message)
+                    showAlert('Cannot access goals due to RLS policies. Use service role key for full access.', 'warning')
+                }
+
+                // Load schedules
+                const { data: schedules, error: schedulesError } = await supabase
+                    .from('schedules')
+                    .select('*')
+                
+                if (schedulesError && !isServiceRole) {
+                    console.log('Schedules query failed (expected with RLS):', schedulesError.message)
+                }
+
+                const goalsData = goals || []
+                const schedulesData = schedules || []
+
+                // Update statistics
+                const uniqueUsers = new Set(goalsData.map(g => g.user_id)).size
+                const completedGoals = goalsData.filter(g => g.status === 'completed').length
+                const activeSchedules = schedulesData.filter(s => !s.completed).length
+
+                document.getElementById('totalUsers').textContent = uniqueUsers
+                document.getElementById('totalGoals').textContent = goalsData.length
+                document.getElementById('completedGoals').textContent = completedGoals
+                document.getElementById('activeSchedules').textContent = activeSchedules
+
+                // Update growth indicators
+                const completionRate = goalsData.length > 0 ? ((completedGoals / goalsData.length) * 100).toFixed(1) : 0
+                document.getElementById('userGrowth').textContent = `${uniqueUsers} unique users`
+                document.getElementById('goalGrowth').textContent = `${goalsData.length} total goals`
+                document.getElementById('completionRate').textContent = `${completionRate}% completion rate`
+                document.getElementById('scheduleInfo').textContent = `${activeSchedules} active tasks`
+
+                // Update table
+                document.getElementById('goalsLoading').classList.add('hidden')
+                
+                if (goalsData.length > 0) {
+                    document.getElementById('goalsTable').classList.remove('hidden')
+                    document.getElementById('goalsEmpty').classList.add('hidden')
+                    
+                    const tbody = document.getElementById('goalsTableBody')
+                    tbody.innerHTML = ''
+                    
+                    goalsData.slice(0, 10).forEach(goal => {
+                        const row = document.createElement('tr')
+                        row.innerHTML = `
+                            <td style="font-weight: 600;">${goal.title}</td>
+                            <td style="font-family: monospace; font-size: 10px;">${goal.user_id ? goal.user_id.substring(0, 8) + '...' : 'N/A'}</td>
+                            <td><span class="category-badge">${goal.category || 'None'}</span></td>
+                            <td><span class="status-badge status-${goal.status}">${goal.status}</span></td>
+                            <td>${new Date(goal.created_at).toLocaleDateString()}</td>
+                        `
+                        tbody.appendChild(row)
+                    })
+                } else {
+                    document.getElementById('goalsTable').classList.add('hidden')
+                    document.getElementById('goalsEmpty').classList.remove('hidden')
+                }
+
+            } catch (error) {
+                console.error('Error loading dashboard:', error)
+                showAlert('Error loading dashboard: ' + error.message, 'error')
+            }
+        }
+
+        async function createSampleData() {
+            if (!supabase) {
+                showAlert('Please connect to database first', 'error')
+                return
+            }
+
+            if (!isServiceRole) {
+                showAlert('Sample data creation requires service role access', 'warning')
+                return
+            }
+
+            try {
+                const confirmed = confirm('This will create sample goals and schedules. Continue?')
+                if (!confirmed) return
+
+                showAlert('Creating sample data...', 'success')
+
+                const testUserId = crypto.randomUUID()
+                const sampleGoals = [
+                    { title: 'Learn React Native', description: 'Master mobile app development', category: 'Learning', status: 'active', user_id: testUserId },
+                    { title: 'Run 5K Daily', description: 'Improve cardiovascular health', category: 'Health', status: 'active', user_id: testUserId },
+                    { title: 'Read 12 Books', description: 'Expand knowledge and vocabulary', category: 'Personal', status: 'active', user_id: testUserId },
+                    { title: 'Save $10,000', description: 'Build emergency fund', category: 'Finance', status: 'active', user_id: testUserId },
+                    { title: 'Get Promotion', description: 'Advance career goals', category: 'Career', status: 'completed', user_id: testUserId }
+                ]
+
+                const { data, error } = await supabase
+                    .from('goals')
+                    .insert(sampleGoals)
+                    .select()
+
+                if (error) throw error
+
+                showAlert(`Successfully created ${data.length} sample goals!`, 'success')
+                await loadDashboard()
+
+            } catch (error) {
+                console.error('Error creating sample data:', error)
+                showAlert('Error creating sample data: ' + error.message, 'error')
+            }
+        }
+
+        async function refreshDashboard() {
+            if (!supabase) {
+                showAlert('Please connect to database first', 'error')
+                return
+            }
+            
+            showAlert('Refreshing dashboard...', 'success')
+            await loadDashboard()
+        }
+
+        async function clearAllData() {
+            if (!supabase || !isServiceRole) {
+                showAlert('Clear data requires service role access', 'error')
+                return
+            }
+
+            const confirmed = confirm('This will DELETE ALL goals and schedules. This cannot be undone. Continue?')
+            if (!confirmed) return
+
+            try {
+                await supabase.from('goals').delete().neq('id', '')
+                await supabase.from('schedules').delete().neq('id', '')
+                
+                showAlert('All data cleared successfully', 'success')
+                await loadDashboard()
+                
+            } catch (error) {
+                showAlert('Error clearing data: ' + error.message, 'error')
+            }
+        }
+
+        async function testConnection() {
+            if (!supabase) {
+                showAlert('Please connect to database first', 'error')
+                return
+            }
+
+            try {
+                const { data, error } = await supabase.from('goals').select('count', { count: 'exact', head: true })
+                
+                if (error) {
+                    showAlert('Connection test failed: ' + error.message, 'error')
+                } else {
+                    showAlert('Connection test successful!', 'success')
+                }
+            } catch (error) {
+                showAlert('Connection test error: ' + error.message, 'error')
+            }
+        }
+
+        function viewRawData() {
+            if (!supabase) {
+                showAlert('Please connect to database first', 'error')
+                return
+            }
+            
+            alert('Raw data viewing feature would be implemented here. For now, check the browser console for data logs.')
+        }
+
+        function exportData() {
+            showAlert('Export feature would be implemented here', 'warning')
+        }
+
+        // Auto-focus on service key input
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('serviceKey').focus()
+        })
+    </script>
+</body>
+</html>

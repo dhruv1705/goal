@@ -1,0 +1,287 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+.app-container {
+    max-width: 375px;
+    margin: 0 auto;
+    background-color: white;
+    min-height: 100vh;
+    position: relative;
+}
+
+/* Status Bar */
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 20px;
+    background-color: white;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.status-icons {
+    display: flex;
+    gap: 5px;
+    font-size: 12px;
+}
+
+/* Header */
+.header {
+    padding: 20px 20px 10px;
+    background-color: white;
+}
+
+.header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+/* Tab Navigation */
+.tab-navigation {
+    display: flex;
+    padding: 0 20px;
+    margin-bottom: 20px;
+    background-color: white;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    background-color: #f8f8f8;
+    color: #666;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 12px;
+    margin-right: 8px;
+    transition: all 0.2s ease;
+}
+
+.tab-btn:last-child {
+    margin-right: 0;
+}
+
+.tab-btn.active {
+    background-color: #4F46E5;
+    color: white;
+}
+
+/* Date Navigation */
+.date-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px 20px;
+    background-color: white;
+}
+
+.nav-arrow {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #666;
+    cursor: pointer;
+    padding: 8px;
+}
+
+.current-date {
+    font-size: 18px;
+    font-weight: 600;
+    color: #4F46E5;
+    margin: 0 20px;
+}
+
+/* Stats Container */
+.stats-container {
+    display: flex;
+    gap: 12px;
+    padding: 0 20px 20px;
+    background-color: white;
+}
+
+.stat-card {
+    flex: 1;
+    background-color: #f8f9fa;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 32px;
+    font-weight: 700;
+    color: #4F46E5;
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #666;
+    font-weight: 500;
+}
+
+/* Task List */
+.task-list {
+    padding: 0 20px;
+    background-color: white;
+    padding-bottom: 100px;
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.task-item:last-child {
+    border-bottom: none;
+}
+
+.task-time {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    width: 60px;
+    flex-shrink: 0;
+}
+
+.task-content {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    margin-left: 20px;
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.task-accent {
+    width: 4px;
+    height: 40px;
+    border-radius: 2px;
+    margin-right: 16px;
+}
+
+.task-accent.physical {
+    background-color: #10B981;
+}
+
+.task-details {
+    flex: 1;
+}
+
+.task-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 4px;
+}
+
+.task-category {
+    font-size: 14px;
+    color: #666;
+}
+
+/* Floating Action Button */
+.fab {
+    position: fixed;
+    bottom: 100px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: #4F46E5;
+    color: white;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    transition: all 0.2s ease;
+}
+
+.fab:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 375px;
+    background-color: white;
+    border-top: 1px solid #e5e5e5;
+    display: flex;
+    padding: 8px 0 20px;
+}
+
+.nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.nav-icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.nav-label {
+    font-size: 10px;
+    color: #666;
+    font-weight: 500;
+}
+
+.nav-item.active .nav-label {
+    color: #4F46E5;
+    font-weight: 600;
+}
+
+.nav-item.active .nav-icon {
+    filter: hue-rotate(200deg) saturate(2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 375px) {
+    .app-container {
+        max-width: 100%;
+    }
+    
+    .bottom-nav {
+        max-width: 100%;
+    }
+}
+
+/* Android navigation bar simulation */
+.app-container::after {
+    content: '';
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 375px;
+    height: 4px;
+    background-color: #333;
+    border-radius: 2px 2px 0 0;
+}

@@ -10,6 +10,7 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../contexts/AuthContext'
+import { usePreferences } from '../contexts/PreferencesContext'
 import { supabase } from '../lib/supabase'
 
 const { width } = Dimensions.get('window')
@@ -38,6 +39,7 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ navigation }
   const [categoryData, setCategoryData] = useState<CategoryData[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
+  const { getOrderedCategories, primaryCategory, secondaryCategories } = usePreferences()
   const insets = useSafeAreaInsets()
 
   useEffect(() => {
@@ -177,14 +179,37 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ navigation }
     navigation.navigate('Schedule', { categoryFilter: category })
   }
 
-  const renderCategoryCard = (category: CategoryData, index: number) => {
+  const getOrderedCategoryData = () => {
+    const orderedCategories = getOrderedCategories()
+    return categoryData.sort((a, b) => {
+      const aOrder = orderedCategories.findIndex(cat => cat.category === a.name)
+      const bOrder = orderedCategories.findIndex(cat => cat.category === b.name)
+      return aOrder - bOrder
+    })
+  }
+
+  const getCategoryPriority = (categoryName: string) => {
+    const orderedCategories = getOrderedCategories()
+    const categoryInfo = orderedCategories.find(cat => cat.category === categoryName)
+    return categoryInfo
+  }
+
+  const renderCategoryCard = (category: CategoryData, index: number, isFocusArea: boolean = false) => {
     const categoryInfo = categories.find(cat => cat.name === category.name)
+    const categoryPriority = getCategoryPriority(category.name)
     const completionRate = category.totalGoals > 0 
       ? Math.round((category.completedGoals / category.totalGoals) * 100) 
       : 0
 
     return (
-      <View key={category.name} style={styles.categoryCard}>
+      <View 
+        key={`${category.name}-${isFocusArea ? 'focus' : 'all'}`} 
+        style={[
+          styles.categoryCard,
+          categoryPriority?.is_primary && styles.categoryCardPrimary,
+          isFocusArea && styles.categoryCardFocus
+        ]}
+      >
         <View style={styles.categoryHeader}>
           <CategoryIcon categoryName={category.name} />
           <View style={styles.categoryTitleContainer}>
@@ -232,6 +257,18 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ navigation }
             />
           </View>
         </View>
+
+        {/* Priority Badges */}
+        {categoryPriority?.is_primary && (
+          <View style={styles.primaryBadge}>
+            <Text style={styles.primaryBadgeText}>PRIMARY FOCUS</Text>
+          </View>
+        )}
+        {!categoryPriority?.is_primary && categoryPriority && categoryPriority.priority_score > 25 && (
+          <View style={styles.secondaryBadge}>
+            <Text style={styles.secondaryBadgeText}>FOCUS AREA</Text>
+          </View>
+        )}
       </View>
     )
   }
@@ -242,7 +279,9 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ navigation }
       
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Categories</Text>
-        <Text style={styles.headerSubtitle}>Organize your goals and tasks</Text>
+        <Text style={styles.headerSubtitle}>
+          {primaryCategory ? `Focusing on ${primaryCategory}` : 'Organize your goals and tasks'}
+        </Text>
       </View>
 
       <ScrollView
@@ -255,7 +294,31 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ navigation }
             <Text style={styles.loadingText}>Loading categories...</Text>
           </View>
         ) : (
-          categoryData.map((category, index) => renderCategoryCard(category, index))
+          <>
+            {/* Your Focus Areas Section */}
+            {(primaryCategory || secondaryCategories.length > 0) && (
+              <View style={styles.focusSection}>
+                <Text style={styles.focusSectionTitle}>🎯 Your Focus Areas</Text>
+                <Text style={styles.focusSectionSubtitle}>
+                  Categories you've prioritized for your goals
+                </Text>
+                {getOrderedCategoryData()
+                  .filter(category => 
+                    category.name === primaryCategory || secondaryCategories.includes(category.name)
+                  )
+                  .map((category, index) => renderCategoryCard(category, index, true))
+                }
+              </View>
+            )}
+
+            {/* All Categories Section */}
+            <View style={styles.allCategoriesSection}>
+              <Text style={styles.sectionTitle}>
+                {(primaryCategory || secondaryCategories.length > 0) ? 'All Categories' : 'Your Categories'}
+              </Text>
+              {getOrderedCategoryData().map((category, index) => renderCategoryCard(category, index, false))}
+            </View>
+          </>
         )}
       </ScrollView>
 
@@ -353,6 +416,29 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
   },
+  focusSection: {
+    marginBottom: 32,
+  },
+  focusSectionTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 6,
+  },
+  focusSectionSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 20,
+  },
+  allCategoriesSection: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 16,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -373,6 +459,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+    position: 'relative',
+  },
+  categoryCardPrimary: {
+    borderWidth: 2,
+    borderColor: '#7C3AED',
+    backgroundColor: '#F8F7FF',
+    shadowColor: '#7C3AED',
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  categoryCardFocus: {
+    borderWidth: 1,
+    borderColor: '#10B981',
   },
   categoryHeader: {
     flexDirection: 'row',
@@ -706,5 +806,37 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 8,
     position: 'absolute',
     bottom: 3,
+  },
+
+  // Priority badges for category cards
+  primaryBadge: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: '#7C3AED',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  primaryBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+  },
+  secondaryBadge: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: '#10B981',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  secondaryBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
   },
 })

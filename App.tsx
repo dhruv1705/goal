@@ -4,8 +4,10 @@ import { NavigationContainer } from '@react-navigation/native'
 import { createStackNavigator } from '@react-navigation/stack'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { PreferencesProvider, usePreferences } from './contexts/PreferencesContext'
 import { LoginScreen } from './screens/LoginScreen'
 import { SignUpScreen } from './screens/SignUpScreen'
+import { OnboardingScreen } from './screens/OnboardingScreen'
 import { ScheduleScreen } from './screens/ScheduleScreen'
 import { AddEditScheduleScreen } from './screens/AddEditScheduleScreen'
 import { ProfileScreen } from './screens/ProfileScreen'
@@ -40,11 +42,38 @@ const MainStack = () => (
     <Stack.Screen name="AddEditGoal" component={AddEditGoalScreen} />
     <Stack.Screen name="GoalDetail" component={GoalDetailScreen} />
     <Stack.Screen name="Feedback" component={FeedbackScreen} />
+    <Stack.Screen 
+      name="Onboarding" 
+      children={(props) => (
+        <OnboardingScreen 
+          {...props} 
+          onComplete={() => {
+            props.navigation.goBack()
+          }} 
+        />
+      )}
+    />
   </Stack.Navigator>
 )
 
-const AppNavigator = () => {
-  const { user, loading } = useAuth()
+const AppContent = () => {
+  const { user, loading: authLoading } = useAuth()
+  const { onboardingCompleted, loading: preferencesLoading, refreshPreferences } = usePreferences()
+  const [forceMainApp, setForceMainApp] = React.useState(false)
+
+  const loading = authLoading || (user && preferencesLoading)
+  const shouldShowOnboarding = user && !onboardingCompleted && !forceMainApp
+
+  // Add debug logging
+  console.log('🔍 AppContent render:', {
+    user: !!user,
+    onboardingCompleted,
+    forceMainApp,
+    loading,
+    authLoading,
+    preferencesLoading,
+    shouldShowOnboarding
+  })
 
   if (loading) {
     return (
@@ -54,10 +83,56 @@ const AppNavigator = () => {
     )
   }
 
+  console.log(shouldShowOnboarding ? 'Showing onboarding screen' : 'Showing main app navigation')
+
   return (
     <NavigationContainer>
-      {user ? <MainStack /> : <AuthStack />}
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {shouldShowOnboarding ? (
+          <Stack.Screen 
+            name="Onboarding" 
+            children={(props) => (
+              <OnboardingScreen 
+                {...props} 
+                onComplete={() => {
+                  console.log('🎯 Onboarding onComplete callback triggered - forcing main app')
+                  console.log('🔄 Setting forceMainApp to true...')
+                  setForceMainApp(true)
+                  console.log('📡 Refreshing preferences...')
+                  refreshPreferences()
+                  console.log('✅ onComplete callback finished')
+                }} 
+              />
+            )}
+          />
+        ) : user ? (
+          <>
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Categories" component={CategoriesScreen} />
+            <Stack.Screen name="Schedule" component={ScheduleScreen} />
+            <Stack.Screen name="AddEdit" component={AddEditScheduleScreen} />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
+            <Stack.Screen name="Goals" component={GoalsScreen} />
+            <Stack.Screen name="AddEditGoal" component={AddEditGoalScreen} />
+            <Stack.Screen name="GoalDetail" component={GoalDetailScreen} />
+            <Stack.Screen name="Feedback" component={FeedbackScreen} />
+          </>
+        ) : (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="SignUp" component={SignUpScreen} />
+          </>
+        )}
+      </Stack.Navigator>
     </NavigationContainer>
+  )
+}
+
+const AppNavigator = () => {
+  return (
+    <PreferencesProvider>
+      <AppContent />
+    </PreferencesProvider>
   )
 }
 

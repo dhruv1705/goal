@@ -14,6 +14,7 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../contexts/AuthContext'
+import { usePreferences } from '../contexts/PreferencesContext'
 import { supabase } from '../lib/supabase'
 import { Tables } from '../types/supabase'
 import IMAGES from '../assets'
@@ -28,6 +29,7 @@ interface HomeScreenProps {
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { user } = useAuth()
+  const { categoryPriorities, getOrderedCategories, primaryCategory } = usePreferences()
   const insets = useSafeAreaInsets()
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -465,6 +467,49 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   day: 'numeric'
                 })}
               </Text>
+              {primaryCategory && (
+                <Text style={styles.focusText}>
+                  🎯 Focusing on {primaryCategory}
+                </Text>
+              )}
+            </View>
+
+            {/* Your Focus Areas */}
+            <View style={styles.focusAreasSection}>
+              <Text style={styles.sectionTitle}>Your Focus Areas</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScrollContainer}>
+                {getOrderedCategories().map((category, index) => (
+                  <TouchableOpacity
+                    key={category.category}
+                    style={[
+                      styles.categoryQuickCard,
+                      category.is_primary && styles.categoryQuickCardPrimary,
+                      index === 0 && styles.categoryQuickCardFirst
+                    ]}
+                    onPress={() => navigation.navigate('Goals', { categoryFilter: category.category })}
+                  >
+                    <View style={[styles.categoryQuickIcon, { backgroundColor: category.color }]}>
+                      <Text style={styles.categoryQuickEmoji}>{category.icon}</Text>
+                    </View>
+                    <Text style={[
+                      styles.categoryQuickName,
+                      category.is_primary && styles.categoryQuickNamePrimary
+                    ]}>
+                      {category.category}
+                    </Text>
+                    {category.is_primary && (
+                      <View style={styles.primaryIndicator}>
+                        <Text style={styles.primaryIndicatorText}>PRIMARY</Text>
+                      </View>
+                    )}
+                    {!category.is_primary && category.priority_score > 25 && (
+                      <View style={styles.secondaryIndicator}>
+                        <Text style={styles.secondaryIndicatorText}>FOCUS</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
 
         {/* Progress Overview */}
@@ -776,6 +821,94 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
     fontWeight: '500',
+  },
+  focusText: {
+    fontSize: 14,
+    color: '#7C3AED',
+    fontWeight: '600',
+    marginTop: 8,
+  },
+  focusAreasSection: {
+    paddingVertical: 16,
+    marginBottom: 8,
+  },
+  categoryScrollContainer: {
+    paddingLeft: 20,
+    paddingRight: 20,
+    gap: 12,
+  },
+  categoryQuickCard: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    minWidth: 120,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    position: 'relative',
+  },
+  categoryQuickCardPrimary: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#7C3AED',
+    borderWidth: 2,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  categoryQuickCardFirst: {
+    marginLeft: 0,
+  },
+  categoryQuickIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  categoryQuickEmoji: {
+    fontSize: 20,
+  },
+  categoryQuickName: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#374151',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  categoryQuickNamePrimary: {
+    color: '#7C3AED',
+    fontWeight: '600',
+  },
+  primaryIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#7C3AED',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  primaryIndicatorText: {
+    fontSize: 8,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  secondaryIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#10B981',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  secondaryIndicatorText: {
+    fontSize: 8,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   progressSection: {
     paddingHorizontal: 20,

@@ -12,6 +12,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../contexts/AuthContext'
 import IMAGES from '../assets'
+import { usePreferences } from '../contexts/PreferencesContext'
+
 
 interface ProfileScreenProps {
   navigation: any
@@ -19,7 +21,25 @@ interface ProfileScreenProps {
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const { user, signOut } = useAuth()
+  const { primaryCategory, secondaryCategories, refreshPreferences } = usePreferences()
   const insets = useSafeAreaInsets()
+
+  const handleUpdatePreferences = () => {
+    Alert.alert(
+      'Update Preferences',
+      'This will allow you to change your category preferences and focus areas.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Update',
+          onPress: () => {
+            // Navigate to onboarding screen but in "update" mode
+            navigation.navigate('Onboarding')
+          }
+        }
+      ]
+    )
+  }
 
   const handleSignOut = async () => {
     Alert.alert(
@@ -47,6 +67,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   const menuItems = [
     {
+      title: 'Category Preferences',
+      iconType: 'preferences',
+      onPress: handleUpdatePreferences,
+    },
+    {
       title: 'Account Settings',
       iconType: 'settings',
       onPress: () => Alert.alert('Coming Soon', 'Account settings will be available soon'),
@@ -70,6 +95,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   const renderMenuIcon = (iconType: string) => {
     switch (iconType) {
+      case 'preferences':
+        return (
+          <View style={styles.menuIconContainer}>
+            <View style={styles.preferencesIcon}>
+              <View style={styles.preferencesGrid}>
+                <View style={[styles.preferencesSquare, { backgroundColor: '#7C3AED' }]} />
+                <View style={[styles.preferencesSquare, { backgroundColor: '#10B981' }]} />
+                <View style={[styles.preferencesSquare, { backgroundColor: '#6B7280' }]} />
+                <View style={[styles.preferencesSquare, { backgroundColor: '#6B7280' }]} />
+              </View>
+            </View>
+          </View>
+        )
       case 'settings':
         return (
           <View style={styles.menuIconContainer}>
@@ -139,6 +177,27 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
           </View>
         </View>
+
+        {/* User Preferences Display */}
+        {primaryCategory && (
+          <View style={styles.preferencesSection}>
+            <Text style={styles.preferencesSectionTitle}>Your Focus Areas</Text>
+            <View style={styles.preferencesDisplay}>
+              <View style={styles.primaryPreference}>
+                <Text style={styles.primaryLabel}>Primary Focus</Text>
+                <Text style={styles.primaryCategory}>{primaryCategory}</Text>
+              </View>
+              {secondaryCategories.length > 0 && (
+                <View style={styles.secondaryPreferences}>
+                  <Text style={styles.secondaryLabel}>Secondary Focus</Text>
+                  <Text style={styles.secondaryCategories}>
+                    {secondaryCategories.join(', ')}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Menu Items */}
         <View style={styles.menuSection}>
@@ -695,5 +754,78 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 1,
     marginBottom: 2,
+  },
+
+  // Preferences icon styles
+  preferencesIcon: {
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  preferencesGrid: {
+    width: 16,
+    height: 16,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  preferencesSquare: {
+    width: 6,
+    height: 6,
+    borderRadius: 1,
+    marginBottom: 2,
+  },
+
+  // User preferences display styles
+  preferencesSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    backgroundColor: 'white',
+    marginBottom: 10,
+  },
+  preferencesSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  preferencesDisplay: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 16,
+  },
+  primaryPreference: {
+    marginBottom: 12,
+  },
+  primaryLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  primaryCategory: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#7C3AED',
+  },
+  secondaryPreferences: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  secondaryLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  secondaryCategories: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#10B981',
   },
 })

@@ -12,6 +12,7 @@ import {
 } from 'react-native'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { useAuth } from '../contexts/AuthContext'
+import { usePreferences } from '../contexts/PreferencesContext'
 import { supabase } from '../lib/supabase'
 import { Tables } from '../types/supabase'
 
@@ -30,21 +31,31 @@ const categories = ['Physical Health', 'Mental Health', 'Finance', 'Social']
 
 export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation, route }) => {
   const { user } = useAuth()
+  const { primaryCategory, getOrderedCategories } = usePreferences()
   const goal = route?.params?.goal
   const isEditing = !!goal
+
+  // Smart default category selection based on user preferences
+  const getDefaultCategory = () => {
+    if (goal?.category) return goal.category // If editing, use existing category
+    if (primaryCategory) return primaryCategory // Use user's primary category
+    return 'Physical Health' // Fallback to first category
+  }
 
   // Debug: Log user info when component mounts
   useEffect(() => {
     console.log('AddEditGoalScreen - User info:', {
       userId: user?.id,
       userEmail: user?.email,
-      isAuthenticated: !!user
+      isAuthenticated: !!user,
+      primaryCategory,
+      defaultCategory: getDefaultCategory()
     })
-  }, [user])
+  }, [user, primaryCategory])
 
   const [title, setTitle] = useState(goal?.title || '')
   const [description, setDescription] = useState(goal?.description || '')
-  const [category, setCategory] = useState(goal?.category || 'Physical Health')
+  const [category, setCategory] = useState(getDefaultCategory())
   const [targetDate, setTargetDate] = useState(goal?.target_date ? new Date(goal.target_date) : null)
   const [status, setStatus] = useState(goal?.status || 'active')
   const [loading, setLoading] = useState(false)
@@ -277,23 +288,31 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
 
         {/* Category Selection */}
         <View style={styles.section}>
-          <Text style={styles.label}>Category</Text>
+          <Text style={styles.label}>
+            Category
+            {primaryCategory && (
+              <Text style={styles.labelHint}> (Default: {primaryCategory})</Text>
+            )}
+          </Text>
           <View style={styles.categoryGrid}>
-            {categories.map((cat) => (
+            {getOrderedCategories().map((categoryInfo) => (
               <TouchableOpacity
-                key={cat}
+                key={categoryInfo.category}
                 style={[
                   styles.categoryItem,
-                  category === cat && styles.categoryItemActive
+                  category === categoryInfo.category && styles.categoryItemActive,
+                  categoryInfo.is_primary && styles.categoryItemPrimary
                 ]}
-                onPress={() => setCategory(cat)}
+                onPress={() => setCategory(categoryInfo.category)}
               >
-                {getCategoryIcon(cat)}
+                {getCategoryIcon(categoryInfo.category)}
                 <Text style={[
                   styles.categoryText,
-                  category === cat && styles.categoryTextActive
+                  category === categoryInfo.category && styles.categoryTextActive,
+                  categoryInfo.is_primary && styles.categoryTextPrimary
                 ]}>
-                  {cat}
+                  {categoryInfo.category}
+                  {categoryInfo.is_primary && ' ⭐'}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -533,6 +552,20 @@ const styles = StyleSheet.create({
   categoryTextActive: {
     color: 'white',
     fontWeight: '600',
+  },
+  categoryItemPrimary: {
+    borderColor: '#7C3AED',
+    borderWidth: 2,
+    backgroundColor: '#F8F7FF',
+  },
+  categoryTextPrimary: {
+    color: '#7C3AED',
+    fontWeight: '600',
+  },
+  labelHint: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '400',
   },
   statusGrid: {
     flexDirection: 'row',

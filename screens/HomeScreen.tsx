@@ -9,11 +9,15 @@ import {
   ScrollView,
   RefreshControl,
   Animated,
+  SafeAreaView,
+  Image,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Tables } from '../types/supabase'
+import IMAGES from '../assets'
+
 
 type Goal = Tables<'goals'>
 type Schedule = Tables<'schedules'>
@@ -410,7 +414,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // Show loading state while fetching data
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="white" />
         
         {/* Header */}
@@ -425,74 +429,41 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
         {/* Bottom Navigation */}
         <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
-          <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-            <View style={styles.navIconContainer}>
-              <View style={styles.homeIconActive}>
-                <View style={styles.homeIconRoofActive} />
-                <View style={styles.homeIconBodyActive} />
-              </View>
-            </View>
-            <Text style={styles.navLabelActive}>Home</Text>
+          <TouchableOpacity style={[styles.navItem]}>
+            <Image source={IMAGES.HOME} style={[styles.navIcon, styles.navIconActive]} resizeMode="contain"/>
           </TouchableOpacity>
+
           <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
-            <View style={styles.navIconContainer}>
-              <View style={styles.categoriesIcon}>
-                <View style={styles.categoriesGrid}>
-                  <View style={[styles.categoriesSquare, { backgroundColor: '#FF6B6B' }]} />
-                  <View style={[styles.categoriesSquare, { backgroundColor: '#4ECDC4' }]} />
-                  <View style={[styles.categoriesSquare, { backgroundColor: '#45B7D1' }]} />
-                  <View style={[styles.categoriesSquare, { backgroundColor: '#96CEB4' }]} />
-                </View>
-              </View>
-            </View>
-            <Text style={styles.navLabel}>Categories</Text>
+            <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
-            <View style={styles.navIconContainer}>
-              <View style={styles.goalsIcon}>
-                <View style={styles.goalsFlagPole} />
-                <View style={styles.goalsFlagBody} />
-              </View>
-            </View>
-            <Text style={styles.navLabel}>Goals</Text>
+
+          <TouchableOpacity 
+            style={styles.navItem} 
+            onPress={() => navigation.navigate('Goals')}
+          >
+            <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
-            <View style={styles.navIconContainer}>
-              <View style={styles.scheduleIcon}>
-                <View style={styles.scheduleCalendarBody} />
-                <View style={styles.scheduleCalendarTop} />
-                <View style={styles.scheduleGridContainer}>
-                  <View style={styles.scheduleGridRow}>
-                    <View style={styles.scheduleGridDot} />
-                    <View style={styles.scheduleGridDot} />
-                    <View style={styles.scheduleGridDot} />
-                  </View>
-                  <View style={styles.scheduleGridRow}>
-                    <View style={styles.scheduleGridDot} />
-                    <View style={styles.scheduleGridDot} />
-                    <View style={styles.scheduleGridDot} />
-                  </View>
-                </View>
-              </View>
-            </View>
-            <Text style={styles.navLabel}>Schedule</Text>
+
+          <TouchableOpacity 
+            style={styles.navItem} 
+            onPress={() => navigation.navigate('Schedule')}
+          >
+            <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
-            <View style={styles.navIconContainer}>
-              <View style={styles.profileIcon}>
-                <View style={styles.profileHead} />
-                <View style={styles.profileBody} />
-              </View>
-            </View>
-            <Text style={styles.navLabel}>Profile</Text>
+
+          <TouchableOpacity 
+            style={styles.navItem} 
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     )
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="white" />
 
       {/* Header */}
@@ -743,75 +714,107 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       {/* Bottom Navigation */}
       <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
         <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.homeIconActive}>
-              <View style={styles.homeIconRoofActive} />
-              <View style={styles.homeIconBodyActive} />
-            </View>
-          </View>
+          <Image 
+            source={IMAGES.HOME}
+            style={[styles.navIcon, styles.navIconActive]}
+            resizeMode="contain"
+          />
           <Text style={styles.navLabelActive}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.categoriesIcon}>
-              <View style={styles.categoriesGrid}>
-                <View style={[styles.categoriesSquare, { backgroundColor: '#FF6B6B' }]} />
-                <View style={[styles.categoriesSquare, { backgroundColor: '#4ECDC4' }]} />
-                <View style={[styles.categoriesSquare, { backgroundColor: '#45B7D1' }]} />
-                <View style={[styles.categoriesSquare, { backgroundColor: '#96CEB4' }]} />
-              </View>
-            </View>
-          </View>
+
+        <TouchableOpacity 
+          style={styles.navItem} 
+          onPress={() => navigation.navigate('Categories')}
+        >
+          <Image 
+            source={IMAGES.CATEGORIES}
+            style={styles.navIcon}
+            resizeMode="contain"
+            tintColor="#808080"
+          />
           <Text style={styles.navLabel}>Categories</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.goalsIcon}>
-              <View style={styles.goalsFlagPole} />
-              <View style={styles.goalsFlagBody} />
-            </View>
-          </View>
+
+        <TouchableOpacity 
+          style={styles.navItem} 
+          onPress={() => navigation.navigate('Goals')}
+        >
+          <Image 
+            source={IMAGES.GOALS}
+            style={styles.navIcon}
+            resizeMode="contain"
+            tintColor="#808080"
+          />
           <Text style={styles.navLabel}>Goals</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.scheduleIcon}>
-              <View style={styles.scheduleCalendarBody} />
-              <View style={styles.scheduleCalendarTop} />
-              <View style={styles.scheduleGridContainer}>
-                <View style={styles.scheduleGridRow}>
-                  <View style={styles.scheduleGridDot} />
-                  <View style={styles.scheduleGridDot} />
-                  <View style={styles.scheduleGridDot} />
-                </View>
-                <View style={styles.scheduleGridRow}>
-                  <View style={styles.scheduleGridDot} />
-                  <View style={styles.scheduleGridDot} />
-                  <View style={styles.scheduleGridDot} />
-                </View>
-              </View>
-            </View>
-          </View>
+
+        <TouchableOpacity 
+          style={styles.navItem} 
+          onPress={() => navigation.navigate('Schedule')}
+        >
+          <Image 
+            source={IMAGES.SCHEDULES}
+            style={styles.navIcon}
+            resizeMode="contain"
+            tintColor="#808080"
+          />
           <Text style={styles.navLabel}>Schedule</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.profileIcon}>
-              <View style={styles.profileHead} />
-              <View style={styles.profileBody} />
-            </View>
-          </View>
+
+        <TouchableOpacity 
+          style={styles.navItem} 
+          onPress={() => navigation.navigate('Profile')}
+        >
+          <Image 
+            source={IMAGES.ACCOUNT}
+            style={styles.navIcon}
+            resizeMode="contain"
+            tintColor="#808080"
+          />
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  navItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  navIcon: {
+    width: 24,
+    height: 24,
+    marginBottom: 4,
+    opacity: 0.6,
+  },
+  navIconActive: {
+    opacity: 1,
+  },
+  navLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  navLabelActive: {
+    fontSize: 12,
+    color: '#6366F1',
+    marginTop: 4,
   },
   header: {
     paddingHorizontal: 20,
@@ -1492,359 +1495,5 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 7,
     left: 7,
-  },
-
-  // Bottom Navigation Styles
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    backgroundColor: 'white',
-    borderTopWidth: 0.5,
-    borderTopColor: '#E5E7EB',
-    paddingTop: 12,
-    paddingHorizontal: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  navItemActive: {},
-  navIconContainer: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  navLabel: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  navLabelActive: {
-    fontSize: 12,
-    color: '#7C3AED',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  
-  // Navigation Icon Styles
-  // Home Icon (Active)
-  homeIconActive: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  homeIconRoofActive: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 9,
-    borderRightWidth: 9,
-    borderBottomWidth: 8,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: '#7C3AED',
-    position: 'absolute',
-    top: 1,
-  },
-  homeIconBodyActive: {
-    width: 16,
-    height: 12,
-    borderWidth: 1.5,
-    borderColor: '#7C3AED',
-    borderTopWidth: 0,
-    position: 'absolute',
-    top: 8,
-  },
-  
-  // Goals Icon - Flag
-  goalsIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    paddingTop: 3,
-    position: 'relative',
-  },
-  goalsFlagPole: {
-    width: 1.5,
-    height: 18,
-    backgroundColor: '#9CA3AF',
-    position: 'absolute',
-    left: 4,
-  },
-  goalsFlagBody: {
-    width: 12,
-    height: 8,
-    borderWidth: 1.5,
-    borderColor: '#9CA3AF',
-    borderLeftWidth: 0,
-    backgroundColor: 'transparent',
-    position: 'absolute',
-    left: 5.5,
-    top: 3,
-  },
-  
-  // Schedule Icon - Calendar
-  scheduleIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  scheduleCalendarBody: {
-    width: 18,
-    height: 16,
-    backgroundColor: '#9CA3AF',
-    borderRadius: 2,
-    position: 'absolute',
-    top: 4,
-  },
-  scheduleCalendarTop: {
-    width: 20,
-    height: 3,
-    backgroundColor: '#9CA3AF',
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-    position: 'absolute',
-    top: 1,
-  },
-  scheduleGridContainer: {
-    width: 14,
-    height: 10,
-    position: 'absolute',
-    top: 7,
-    justifyContent: 'space-between',
-  },
-  scheduleGridRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    height: 3,
-  },
-  scheduleGridDot: {
-    width: 2.5,
-    height: 2.5,
-    backgroundColor: 'white',
-    borderRadius: 0.5,
-  },
-  
-  // Feedback Icon - Speech Bubble
-  feedbackIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  feedbackBubble: {
-    width: 18,
-    height: 14,
-    borderWidth: 1.5,
-    borderColor: '#9CA3AF',
-    borderRadius: 8,
-    position: 'absolute',
-    top: 2,
-  },
-  feedbackTail: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 3,
-    borderRightWidth: 3,
-    borderTopWidth: 4,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: '#9CA3AF',
-    position: 'absolute',
-    bottom: 5,
-    left: 6,
-  },
-  
-  // Profile Icon - Simple User
-  profileIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  profileHead: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#9CA3AF',
-    position: 'absolute',
-    top: 3,
-  },
-  profileBody: {
-    width: 16,
-    height: 10,
-    backgroundColor: '#9CA3AF',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    position: 'absolute',
-    bottom: 3,
-  },
-  
-  // Categories Icon - 2x2 Grid
-  categoriesIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  categoriesGrid: {
-    width: 16,
-    height: 16,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  categoriesSquare: {
-    width: 6,
-    height: 6,
-    borderRadius: 1,
-    marginBottom: 2,
-  },
-
-  // Quick Action Icons
-  goalActionIcon: {
-    width: 20,
-    height: 20,
-    position: 'relative',
-  },
-  goalActionTarget: {
-    width: 16,
-    height: 16,
-    borderWidth: 2,
-    borderColor: '#6B7280',
-    borderRadius: 8,
-    backgroundColor: 'transparent',
-    position: 'absolute',
-    top: 2,
-    left: 2,
-  },
-  goalActionCenter: {
-    width: 6,
-    height: 6,
-    backgroundColor: '#6B7280',
-    borderRadius: 3,
-    position: 'absolute',
-    top: 7,
-    left: 7,
-  },
-  
-  calendarActionIcon: {
-    width: 20,
-    height: 20,
-    position: 'relative',
-  },
-  calendarActionTop: {
-    width: 18,
-    height: 3,
-    backgroundColor: '#6B7280',
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-    position: 'absolute',
-    top: 2,
-    left: 1,
-  },
-  calendarActionBody: {
-    width: 18,
-    height: 14,
-    backgroundColor: '#6B7280',
-    borderRadius: 2,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    position: 'absolute',
-    top: 5,
-    left: 1,
-  },
-  
-  feedbackActionIcon: {
-    width: 20,
-    height: 20,
-    position: 'relative',
-  },
-  feedbackActionBubble: {
-    width: 16,
-    height: 12,
-    backgroundColor: '#6B7280',
-    borderRadius: 6,
-    position: 'absolute',
-    top: 2,
-    left: 2,
-  },
-  feedbackActionTail: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 3,
-    borderRightWidth: 3,
-    borderTopWidth: 4,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: '#6B7280',
-    position: 'absolute',
-    bottom: 4,
-    left: 6,
-  },
-
-  // New Category Icon Styles
-  // Physical Health Icon - Dumbbell
-  physicalHealthIcon: {
-    width: 20,
-    height: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Mental Health Icon - Brain
-  mentalHealthIcon: {
-    width: 20,
-    height: 20,
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Social Icon - People
-  socialIcon: {
-    width: 20,
-    height: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Default Icon
-  defaultIcon: {
-    width: 20,
-    height: 20,
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  defaultIconCircle: {
-    width: 12,
-    height: 12,
-    backgroundColor: '#6B7280',
-    borderRadius: 6,
   },
 })

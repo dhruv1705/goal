@@ -47,12 +47,12 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
   useEffect(() => {
     if (route?.params?.refresh) {
       // Handle optimistic updates first for immediate UI response
-      if (route.params.newGoal) {
+      if (route.params?.newGoal) {
         setGoals(prevGoals => [route.params.newGoal!, ...prevGoals])
-      } else if (route.params.updatedGoal) {
+      } else if (route.params?.updatedGoal) {
         setGoals(prevGoals => 
           prevGoals.map(goal => 
-            goal.id === route.params.updatedGoal!.id ? route.params.updatedGoal! : goal
+            goal.id === route.params?.updatedGoal!.id ? route.params?.updatedGoal! : goal
           )
         )
       }

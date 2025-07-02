@@ -263,24 +263,24 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ navigation }
 
       {/* Bottom Navigation */}
       <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
-        <TouchableOpacity style={[styles.navItem, styles.navItemActive]} onPress={() => navigation.navigate('Home')}>
-        <Image source={IMAGES.HOME} style={[styles.navIcon, styles.navIconActive]} resizeMode="contain" tintColor={'#808080'}/>
-        <Text style={styles.navLabel}>Home</Text>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
+          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
+          <Text style={styles.navLabel}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-        <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain"/>
-        <Text style={styles.navLabelActive}>Categories</Text>
+          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor="#7C3AED" />
+          <Text style={styles.navLabelActive}>Categories</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.navItem, styles.navItemActive]} onPress={() => navigation.navigate('Goals')}>
-          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
+          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
           <Text style={styles.navLabel}>Goals</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.navItem, styles.navItemActive]} onPress={() => navigation.navigate('Schedule')}>
-        <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
+          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
           <Text style={styles.navLabel}>Schedule</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.navItem, styles.navItemActive]} onPress={() => navigation.navigate('Profile')}>
-        <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
+          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
       </View>

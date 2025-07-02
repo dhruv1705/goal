@@ -427,37 +427,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <Text style={styles.loadingText}>Loading your dashboard...</Text>
         </View>
 
-        {/* Bottom Navigation */}
-        <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
-          <TouchableOpacity style={[styles.navItem]}>
-            <Image source={IMAGES.HOME} style={[styles.navIcon, styles.navIconActive]} resizeMode="contain"/>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
-            <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.navItem} 
-            onPress={() => navigation.navigate('Goals')}
-          >
-            <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.navItem} 
-            onPress={() => navigation.navigate('Schedule')}
-          >
-            <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.navItem} 
-            onPress={() => navigation.navigate('Profile')}
-          >
-            <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
-          </TouchableOpacity>
-        </View>
+  
       </SafeAreaView>
     )
   }
@@ -714,63 +684,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       {/* Bottom Navigation */}
       <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
         <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-          <Image 
-            source={IMAGES.HOME}
-            style={[styles.navIcon, styles.navIconActive]}
-            resizeMode="contain"
-          />
+          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor="#7C3AED" />
           <Text style={styles.navLabelActive}>Home</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.navItem} 
-          onPress={() => navigation.navigate('Categories')}
-        >
-          <Image 
-            source={IMAGES.CATEGORIES}
-            style={styles.navIcon}
-            resizeMode="contain"
-            tintColor="#808080"
-          />
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
+          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
           <Text style={styles.navLabel}>Categories</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.navItem} 
-          onPress={() => navigation.navigate('Goals')}
-        >
-          <Image 
-            source={IMAGES.GOALS}
-            style={styles.navIcon}
-            resizeMode="contain"
-            tintColor="#808080"
-          />
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
+          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
           <Text style={styles.navLabel}>Goals</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.navItem} 
-          onPress={() => navigation.navigate('Schedule')}
-        >
-          <Image 
-            source={IMAGES.SCHEDULES}
-            style={styles.navIcon}
-            resizeMode="contain"
-            tintColor="#808080"
-          />
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
+          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
           <Text style={styles.navLabel}>Schedule</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.navItem} 
-          onPress={() => navigation.navigate('Profile')}
-        >
-          <Image 
-            source={IMAGES.ACCOUNT}
-            style={styles.navIcon}
-            resizeMode="contain"
-            tintColor="#808080"
-          />
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
+          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
       </View>
@@ -779,6 +709,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 }
 
 const styles = StyleSheet.create({
+  navItemActive: {},
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -813,7 +744,7 @@ const styles = StyleSheet.create({
   },
   navLabelActive: {
     fontSize: 12,
-    color: '#6366F1',
+    color: '#7C3AED',
     marginTop: 4,
   },
   header: {

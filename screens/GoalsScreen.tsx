@@ -342,23 +342,23 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
       {/* Bottom Navigation */}
       <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
-          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'} />
+          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
           <Text style={styles.navLabel}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
-          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
+          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
           <Text style={styles.navLabel}>Categories</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain"/>
+          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor="#7C3AED" />
           <Text style={styles.navLabelActive}>Goals</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
-          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
+          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
           <Text style={styles.navLabel}>Schedule</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
-          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
+          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
       </View>

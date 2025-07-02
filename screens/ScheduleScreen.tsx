@@ -765,7 +765,7 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
           <Text style={styles.navLabel}>Goals</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain"/>
+          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={'#7C3AED'}/>
           <Text style={styles.navLabelActive}>Schedule</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>

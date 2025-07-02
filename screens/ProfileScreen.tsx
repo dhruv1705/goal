@@ -8,6 +8,7 @@ import {
   Alert,
   ScrollView,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../contexts/AuthContext'
 
 interface ProfileScreenProps {
@@ -16,6 +17,7 @@ interface ProfileScreenProps {
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const { user, signOut } = useAuth()
+  const insets = useSafeAreaInsets()
 
   const handleSignOut = async () => {
     Alert.alert(
@@ -167,8 +169,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       </ScrollView>
 
       {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
+      <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
           <View style={styles.navIconContainer}>
             <View style={styles.homeIcon}>
               <View style={styles.homeIconRoof} />
@@ -176,6 +178,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             </View>
           </View>
           <Text style={styles.navLabel}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
+          <View style={styles.navIconContainer}>
+            <View style={styles.categoriesIcon}>
+              <View style={styles.categoriesGrid}>
+                <View style={[styles.categoriesSquare, { backgroundColor: '#FF6B6B' }]} />
+                <View style={[styles.categoriesSquare, { backgroundColor: '#4ECDC4' }]} />
+                <View style={[styles.categoriesSquare, { backgroundColor: '#45B7D1' }]} />
+                <View style={[styles.categoriesSquare, { backgroundColor: '#96CEB4' }]} />
+              </View>
+            </View>
+          </View>
+          <Text style={styles.navLabel}>Categories</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
           <View style={styles.navIconContainer}>
@@ -206,15 +221,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             </View>
           </View>
           <Text style={styles.navLabel}>Schedule</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.feedbackIcon}>
-              <View style={styles.feedbackBubble} />
-              <View style={styles.feedbackTail} />
-            </View>
-          </View>
-          <Text style={styles.navLabel}>Feedback</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
           <View style={styles.navIconContainer}>
@@ -503,7 +509,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 0.5,
     borderTopColor: '#E5E7EB',
     paddingTop: 12,
-    paddingBottom: 8,
     paddingHorizontal: 8,
     shadowColor: '#000',
     shadowOffset: {
@@ -698,5 +703,27 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 8,
     position: 'absolute',
     bottom: 3,
+  },
+
+  // Categories Icon - 2x2 Grid
+  categoriesIcon: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  categoriesGrid: {
+    width: 16,
+    height: 16,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  categoriesSquare: {
+    width: 6,
+    height: 6,
+    borderRadius: 1,
+    marginBottom: 2,
   },
 })

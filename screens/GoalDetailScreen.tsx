@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native'
 import DateTimePicker from '@react-native-community/datetimepicker'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Tables } from '../types/supabase'
@@ -32,10 +33,13 @@ interface GoalDetailScreenProps {
 export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, route }) => {
   const { goal } = route.params
   const { user } = useAuth()
+  const insets = useSafeAreaInsets()
   const [tasks, setTasks] = useState<Schedule[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [showAddTaskModal, setShowAddTaskModal] = useState(false)
+  const [showTaskDetailModal, setShowTaskDetailModal] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<Schedule | null>(null)
   
   // Add task form state
   const [newTaskTitle, setNewTaskTitle] = useState('')
@@ -359,20 +363,31 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
     })
   }
 
+  const viewTaskDetails = (task: Schedule) => {
+    setSelectedTask(task)
+    setShowTaskDetailModal(true)
+  }
+
   const renderTaskItem = (task: Schedule) => (
     <TouchableOpacity
       key={task.id}
       style={[styles.taskItem, task.completed && styles.taskItemCompleted]}
-      onPress={() => toggleTaskCompletion(task)}
+      onPress={() => viewTaskDetails(task)}
     >
       <View style={styles.taskHeader}>
         <View style={styles.taskLeft}>
-          <View style={[
-            styles.checkbox,
-            task.completed && styles.checkboxCompleted
-          ]}>
+          <TouchableOpacity
+            style={[
+              styles.checkbox,
+              task.completed && styles.checkboxCompleted
+            ]}
+            onPress={(e) => {
+              e.stopPropagation()
+              toggleTaskCompletion(task)
+            }}
+          >
             {task.completed && <Text style={styles.checkmark}>✓</Text>}
-          </View>
+          </TouchableOpacity>
           <View style={styles.taskContent}>
             <Text style={[
               styles.taskTitle,
@@ -721,6 +736,84 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
         </View>
       </Modal>
 
+      {/* Task Detail Modal */}
+      <Modal
+        visible={showTaskDetailModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity
+              onPress={() => setShowTaskDetailModal(false)}
+              style={styles.modalCloseButton}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Task Details</Text>
+            <TouchableOpacity
+              onPress={() => {
+                if (selectedTask) {
+                  toggleTaskCompletion(selectedTask)
+                  setShowTaskDetailModal(false)
+                }
+              }}
+              style={styles.modalActionButton}
+            >
+              <Text style={styles.modalActionText}>
+                {selectedTask?.completed ? 'Mark Incomplete' : 'Mark Complete'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          
+          {selectedTask && (
+            <ScrollView style={styles.modalScrollView}>
+              <View style={styles.taskDetailContainer}>
+                <Text style={styles.taskDetailTitle}>{selectedTask.title}</Text>
+                
+                <View style={styles.taskDetailMeta}>
+                  <Text style={styles.taskDetailLabel}>Date & Time:</Text>
+                  <Text style={styles.taskDetailValue}>
+                    {formatDate(selectedTask.schedule_date)} at {formatTime(selectedTask.schedule_time)}
+                  </Text>
+                </View>
+                
+                <View style={styles.taskDetailMeta}>
+                  <Text style={styles.taskDetailLabel}>Priority:</Text>
+                  <View style={[
+                    styles.priorityBadge,
+                    { backgroundColor: getPriorityColor(selectedTask.priority) }
+                  ]}>
+                    <Text style={styles.priorityText}>
+                      {selectedTask.priority.toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+                
+                {selectedTask.description && (
+                  <View style={styles.taskDetailMeta}>
+                    <Text style={styles.taskDetailLabel}>Description:</Text>
+                    <Text style={styles.taskDetailDescription}>
+                      {selectedTask.description}
+                    </Text>
+                  </View>
+                )}
+                
+                <View style={styles.taskDetailMeta}>
+                  <Text style={styles.taskDetailLabel}>Status:</Text>
+                  <Text style={[
+                    styles.taskDetailValue,
+                    { color: selectedTask.completed ? '#10B981' : '#F59E0B' }
+                  ]}>
+                    {selectedTask.completed ? 'Completed' : 'Pending'}
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+          )}
+        </View>
+      </Modal>
+
       {/* Date Picker */}
       {showDatePicker && (
         <DateTimePicker
@@ -742,8 +835,8 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
       )}
 
       {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
+      <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
           <View style={styles.navIconContainer}>
             <View style={styles.homeIcon}>
               <View style={styles.homeIconRoof} />
@@ -752,14 +845,14 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
           </View>
           <Text style={styles.navLabel}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
+        <TouchableOpacity style={[styles.navItem, styles.navItemActive]} onPress={() => navigation.navigate('Goals')}>
           <View style={styles.navIconContainer}>
-            <View style={styles.goalsIcon}>
-              <View style={styles.goalsFlagPole} />
-              <View style={styles.goalsFlagBody} />
+            <View style={styles.goalsIconActive}>
+              <View style={styles.goalsFlagPoleActive} />
+              <View style={styles.goalsFlagBodyActive} />
             </View>
           </View>
-          <Text style={styles.navLabel}>Goals</Text>
+          <Text style={styles.navLabelActive}>Goals</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
           <View style={styles.navIconContainer}>
@@ -782,7 +875,7 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
           </View>
           <Text style={styles.navLabel}>Schedule</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Feedback')}>
           <View style={styles.navIconContainer}>
             <View style={styles.feedbackIcon}>
               <View style={styles.feedbackBubble} />
@@ -1294,7 +1387,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 0.5,
     borderTopColor: '#E5E7EB',
     paddingTop: 12,
-    paddingBottom: 8,
     paddingHorizontal: 8,
     shadowColor: '#000',
     shadowOffset: {
@@ -1373,6 +1465,32 @@ const styles = StyleSheet.create({
     height: 8,
     borderWidth: 1.5,
     borderColor: '#9CA3AF',
+    borderLeftWidth: 0,
+    backgroundColor: 'transparent',
+    position: 'absolute',
+    left: 5.5,
+    top: 3,
+  },
+  goalsIconActive: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingTop: 3,
+    position: 'relative',
+  },
+  goalsFlagPoleActive: {
+    width: 1.5,
+    height: 18,
+    backgroundColor: '#7C3AED',
+    position: 'absolute',
+    left: 4,
+  },
+  goalsFlagBodyActive: {
+    width: 12,
+    height: 8,
+    borderWidth: 1.5,
+    borderColor: '#7C3AED',
     borderLeftWidth: 0,
     backgroundColor: 'transparent',
     position: 'absolute',
@@ -1473,5 +1591,45 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 8,
     position: 'absolute',
     bottom: 3,
+  },
+
+  // Task Detail Modal Styles
+  modalActionButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#7C3AED',
+    borderRadius: 8,
+  },
+  modalActionText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  taskDetailContainer: {
+    padding: 20,
+  },
+  taskDetailTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 20,
+  },
+  taskDetailMeta: {
+    marginBottom: 16,
+  },
+  taskDetailLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  taskDetailValue: {
+    fontSize: 16,
+    color: '#1a1a1a',
+  },
+  taskDetailDescription: {
+    fontSize: 16,
+    color: '#1a1a1a',
+    lineHeight: 24,
   },
 })

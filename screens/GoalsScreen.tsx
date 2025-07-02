@@ -11,6 +11,7 @@ import {
   StatusBar,
   ScrollView,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Tables } from '../types/supabase'
@@ -24,6 +25,7 @@ interface GoalsScreenProps {
       refresh?: number
       newGoal?: Goal
       updatedGoal?: Goal
+      categoryFilter?: string
     }
   }
 }
@@ -33,11 +35,13 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'completed'>('active')
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(route?.params?.categoryFilter || null)
   const { user } = useAuth()
+  const insets = useSafeAreaInsets()
 
   useEffect(() => {
     fetchGoals()
-  }, [activeFilter])
+  }, [activeFilter, categoryFilter])
 
   // Listen for navigation params to trigger refresh and handle optimistic updates
   useEffect(() => {
@@ -58,7 +62,12 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
         fetchGoals()
       }, 100)
     }
-  }, [route?.params?.refresh])
+    
+    // Handle category filter changes
+    if (route?.params?.categoryFilter !== undefined) {
+      setCategoryFilter(route.params.categoryFilter)
+    }
+  }, [route?.params?.refresh, route?.params?.categoryFilter])
 
   // Refresh goals when screen comes into focus
   useFocusEffect(
@@ -77,6 +86,10 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
 
       if (activeFilter !== 'all') {
         query = query.eq('status', activeFilter)
+      }
+
+      if (categoryFilter) {
+        query = query.eq('category', categoryFilter)
       }
 
       const { data, error } = await query
@@ -279,6 +292,29 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
           ))}
         </View>
 
+        {/* Category Filter */}
+        <View style={styles.categoryFilterContainer}>
+          <TouchableOpacity
+            style={[styles.categoryFilterTab, !categoryFilter && styles.categoryFilterTabActive]}
+            onPress={() => setCategoryFilter(null)}
+          >
+            <Text style={[styles.categoryFilterText, !categoryFilter && styles.categoryFilterTextActive]}>
+              All Categories
+            </Text>
+          </TouchableOpacity>
+          {(['Physical Health', 'Mental Health', 'Finance', 'Social'] as const).map((category) => (
+            <TouchableOpacity
+              key={category}
+              style={[styles.categoryFilterTab, categoryFilter === category && styles.categoryFilterTabActive]}
+              onPress={() => setCategoryFilter(category)}
+            >
+              <Text style={[styles.categoryFilterText, categoryFilter === category && styles.categoryFilterTextActive]}>
+                {category}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {/* Goals List */}
         <View style={styles.goalsContainer}>
           {goals.length > 0 ? (
@@ -302,8 +338,8 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
       </TouchableOpacity>
 
       {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
+      <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
           <View style={styles.navIconContainer}>
             <View style={styles.homeIcon}>
               <View style={styles.homeIconRoof} />
@@ -311,6 +347,19 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
             </View>
           </View>
           <Text style={styles.navLabel}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
+          <View style={styles.navIconContainer}>
+            <View style={styles.categoriesIcon}>
+              <View style={styles.categoriesGrid}>
+                <View style={[styles.categoriesSquare, { backgroundColor: '#FF6B6B' }]} />
+                <View style={[styles.categoriesSquare, { backgroundColor: '#4ECDC4' }]} />
+                <View style={[styles.categoriesSquare, { backgroundColor: '#45B7D1' }]} />
+                <View style={[styles.categoriesSquare, { backgroundColor: '#96CEB4' }]} />
+              </View>
+            </View>
+          </View>
+          <Text style={styles.navLabel}>Categories</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
           <View style={styles.navIconContainer}>
@@ -341,15 +390,6 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
             </View>
           </View>
           <Text style={styles.navLabel}>Schedule</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.feedbackIcon}>
-              <View style={styles.feedbackBubble} />
-              <View style={styles.feedbackTail} />
-            </View>
-          </View>
-          <Text style={styles.navLabel}>Feedback</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
           <View style={styles.navIconContainer}>
@@ -609,7 +649,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 0.5,
     borderTopColor: '#E5E7EB',
     paddingTop: 12,
-    paddingBottom: 8,
     paddingHorizontal: 8,
     shadowColor: '#000',
     shadowOffset: {
@@ -970,5 +1009,59 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 7,
     left: 7,
+  },
+
+  // Category Filter Styles
+  categoryFilterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#f8f9fa',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  categoryFilterTab: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'transparent',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  categoryFilterTabActive: {
+    backgroundColor: '#7C3AED',
+    borderColor: '#7C3AED',
+  },
+  categoryFilterText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  categoryFilterTextActive: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+
+  // Categories Icon - 2x2 Grid
+  categoriesIcon: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  categoriesGrid: {
+    width: 16,
+    height: 16,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  categoriesSquare: {
+    width: 6,
+    height: 6,
+    borderRadius: 1,
+    marginBottom: 2,
   },
 })

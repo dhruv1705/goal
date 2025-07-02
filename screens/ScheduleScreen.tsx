@@ -9,7 +9,9 @@ import {
   RefreshControl,
   StatusBar,
   ScrollView,
+  Modal,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Tables } from '../types/supabase'
@@ -18,9 +20,14 @@ type Schedule = Tables<'schedules'>
 
 interface ScheduleScreenProps {
   navigation: any
+  route?: {
+    params?: {
+      categoryFilter?: string
+    }
+  }
 }
 
-export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) => {
+export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, route }) => {
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [weeklySchedules, setWeeklySchedules] = useState<Schedule[]>([])
   const [loading, setLoading] = useState(true)
@@ -28,7 +35,13 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) =>
   const [activeTab, setActiveTab] = useState<'Day' | 'Week' | 'Month'>('Day')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedWeekDay, setSelectedWeekDay] = useState(new Date())
+  const [monthlySchedules, setMonthlySchedules] = useState<Schedule[]>([])
+  const [selectedMonthDay, setSelectedMonthDay] = useState(new Date())
   const { user, signOut } = useAuth()
+  const insets = useSafeAreaInsets()
+  const [showActionSheet, setShowActionSheet] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<Schedule | null>(null)
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(route?.params?.categoryFilter || null)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -37,8 +50,10 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) =>
       fetchSchedules()
     } else if (activeTab === 'Week') {
       fetchWeeklySchedules()
+    } else if (activeTab === 'Month') {
+      fetchMonthlySchedules()
     }
-  }, [activeTab, currentDate, selectedWeekDay])
+  }, [activeTab, currentDate, selectedWeekDay, selectedMonthDay, categoryFilter])
 
   useEffect(() => {
     // Initialize selectedWeekDay to today when switching to Week view
@@ -47,17 +62,49 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) =>
     }
   }, [activeTab])
 
+  useEffect(() => {
+    // Handle category filter changes from route params
+    if (route?.params?.categoryFilter !== undefined) {
+      setCategoryFilter(route.params.categoryFilter)
+    }
+  }, [route?.params?.categoryFilter])
+
   const fetchSchedules = async () => {
     try {
-      const targetDate = activeTab === 'Day' ? today : selectedWeekDay.toISOString().split('T')[0]
+      const targetDate = activeTab === 'Day' ? currentDate.toISOString().split('T')[0] : selectedWeekDay.toISOString().split('T')[0]
       const { data, error } = await supabase
         .from('schedules')
         .select('*')
+        .eq('user_id', user?.id)
         .eq('schedule_date', targetDate)
         .order('schedule_time', { ascending: true })
 
       if (error) throw error
-      setSchedules(data || [])
+
+      // Fetch goal categories separately for tasks that have goal_id
+      const schedulesWithCategories = await Promise.all(
+        (data || []).map(async (schedule) => {
+          if (schedule.goal_id) {
+            const { data: goalData } = await supabase
+              .from('goals')
+              .select('category')
+              .eq('id', schedule.goal_id)
+              .single()
+            
+            return { ...schedule, goalCategory: goalData?.category }
+          }
+          return { ...schedule, goalCategory: null }
+        })
+      )
+
+      // Apply category filter if set
+      const filteredSchedules = categoryFilter 
+        ? schedulesWithCategories.filter(schedule => 
+            schedule.goalCategory === categoryFilter
+          )
+        : schedulesWithCategories
+
+      setSchedules(filteredSchedules)
     } catch (error: any) {
       Alert.alert('Error', 'Failed to fetch schedules')
     } finally {
@@ -73,20 +120,97 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) =>
       const { data, error } = await supabase
         .from('schedules')
         .select('*')
+        .eq('user_id', user?.id)
         .gte('schedule_date', weekStart.toISOString().split('T')[0])
         .lte('schedule_date', weekEnd.toISOString().split('T')[0])
         .order('schedule_date', { ascending: true })
         .order('schedule_time', { ascending: true })
 
       if (error) throw error
-      setWeeklySchedules(data || [])
+
+      // Fetch goal categories separately for tasks that have goal_id
+      const schedulesWithCategories = await Promise.all(
+        (data || []).map(async (schedule) => {
+          if (schedule.goal_id) {
+            const { data: goalData } = await supabase
+              .from('goals')
+              .select('category')
+              .eq('id', schedule.goal_id)
+              .single()
+            
+            return { ...schedule, goalCategory: goalData?.category }
+          }
+          return { ...schedule, goalCategory: null }
+        })
+      )
+
+      // Apply category filter if set
+      const filteredWeeklySchedules = categoryFilter 
+        ? schedulesWithCategories.filter(schedule => 
+            schedule.goalCategory === categoryFilter
+          )
+        : schedulesWithCategories
+
+      setWeeklySchedules(filteredWeeklySchedules)
       
       // Filter schedules for selected day
       const selectedDateStr = selectedWeekDay.toISOString().split('T')[0]
-      const daySchedules = (data || []).filter(s => s.schedule_date === selectedDateStr)
+      const daySchedules = filteredWeeklySchedules.filter(s => s.schedule_date === selectedDateStr)
       setSchedules(daySchedules)
     } catch (error: any) {
       Alert.alert('Error', 'Failed to fetch weekly schedules')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchMonthlySchedules = async () => {
+    try {
+      const monthStart = getMonthStart(currentDate)
+      const monthEnd = getMonthEnd(currentDate)
+      
+      const { data, error } = await supabase
+        .from('schedules')
+        .select('*')
+        .eq('user_id', user?.id)
+        .gte('schedule_date', monthStart.toISOString().split('T')[0])
+        .lte('schedule_date', monthEnd.toISOString().split('T')[0])
+        .order('schedule_date', { ascending: true })
+        .order('schedule_time', { ascending: true })
+
+      if (error) throw error
+
+      // Fetch goal categories separately for tasks that have goal_id
+      const schedulesWithCategories = await Promise.all(
+        (data || []).map(async (schedule) => {
+          if (schedule.goal_id) {
+            const { data: goalData } = await supabase
+              .from('goals')
+              .select('category')
+              .eq('id', schedule.goal_id)
+              .single()
+            
+            return { ...schedule, goalCategory: goalData?.category }
+          }
+          return { ...schedule, goalCategory: null }
+        })
+      )
+
+      // Apply category filter if set
+      const filteredMonthlySchedules = categoryFilter 
+        ? schedulesWithCategories.filter(schedule => 
+            schedule.goalCategory === categoryFilter
+          )
+        : schedulesWithCategories
+
+      setMonthlySchedules(filteredMonthlySchedules)
+      
+      // Filter schedules for selected day
+      const selectedDateStr = selectedMonthDay.toISOString().split('T')[0]
+      const daySchedules = filteredMonthlySchedules.filter(s => s.schedule_date === selectedDateStr)
+      setSchedules(daySchedules)
+    } catch (error: any) {
+      Alert.alert('Error', 'Failed to fetch monthly schedules')
     } finally {
       setLoading(false)
     }
@@ -98,8 +222,62 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) =>
       await fetchSchedules()
     } else if (activeTab === 'Week') {
       await fetchWeeklySchedules()
+    } else if (activeTab === 'Month') {
+      await fetchMonthlySchedules()
     }
     setRefreshing(false)
+  }
+
+  const toggleTaskCompletion = async (task: Schedule) => {
+    try {
+      const { error } = await supabase
+        .from('schedules')
+        .update({ 
+          completed: !task.completed,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', task.id)
+
+      if (error) throw error
+
+      // Update local state
+      if (activeTab === 'Day') {
+        setSchedules(schedules.map(s => 
+          s.id === task.id ? { ...s, completed: !s.completed } : s
+        ))
+      } else if (activeTab === 'Week') {
+        setWeeklySchedules(weeklySchedules.map(s => 
+          s.id === task.id ? { ...s, completed: !s.completed } : s
+        ))
+        // Also update the day schedules if it's visible
+        setSchedules(schedules.map(s => 
+          s.id === task.id ? { ...s, completed: !s.completed } : s
+        ))
+      }
+    } catch (error: any) {
+      Alert.alert('Error', 'Failed to update task completion')
+    }
+  }
+
+  const showTaskActions = (task: Schedule) => {
+    setSelectedTask(task)
+    setShowActionSheet(true)
+  }
+
+  const handleMarkComplete = async () => {
+    if (selectedTask) {
+      await toggleTaskCompletion(selectedTask)
+      setShowActionSheet(false)
+      setSelectedTask(null)
+    }
+  }
+
+  const handleViewEdit = () => {
+    if (selectedTask) {
+      setShowActionSheet(false)
+      navigation.navigate('AddEdit', { schedule: selectedTask })
+      setSelectedTask(null)
+    }
   }
 
   const handleSignOut = async () => {
@@ -156,6 +334,38 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) =>
     return days
   }
 
+  const getMonthStart = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1)
+  }
+
+  const getMonthEnd = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0)
+  }
+
+  const getMonthDays = (date: Date) => {
+    const monthStart = getMonthStart(date)
+    const monthEnd = getMonthEnd(date)
+    const days = []
+    
+    // Add days from previous month to fill the first week
+    const firstDayOfWeek = monthStart.getDay()
+    const startDate = new Date(monthStart)
+    startDate.setDate(startDate.getDate() - firstDayOfWeek)
+    
+    // Generate 42 days (6 weeks × 7 days) for complete calendar grid
+    for (let i = 0; i < 42; i++) {
+      const day = new Date(startDate)
+      day.setDate(startDate.getDate() + i)
+      days.push(day)
+    }
+    
+    return days
+  }
+
+  const isCurrentMonth = (date: Date) => {
+    return date.getMonth() === currentDate.getMonth() && date.getFullYear() === currentDate.getFullYear()
+  }
+
   const navigateDate = (direction: 'prev' | 'next') => {
     if (activeTab === 'Day') {
       const newDate = new Date(currentDate)
@@ -164,6 +374,10 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) =>
     } else if (activeTab === 'Week') {
       const newDate = new Date(currentDate)
       newDate.setDate(currentDate.getDate() + (direction === 'next' ? 7 : -7))
+      setCurrentDate(newDate)
+    } else if (activeTab === 'Month') {
+      const newDate = new Date(currentDate)
+      newDate.setMonth(currentDate.getMonth() + (direction === 'next' ? 1 : -1))
       setCurrentDate(newDate)
     }
   }
@@ -175,15 +389,33 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) =>
     setSchedules(daySchedules)
   }
 
+  const selectMonthDay = (date: Date) => {
+    setSelectedMonthDay(date)
+    const selectedDateStr = date.toISOString().split('T')[0]
+    const daySchedules = monthlySchedules.filter(s => s.schedule_date === selectedDateStr)
+    setSchedules(daySchedules)
+  }
+
   const completedTasks = activeTab === 'Week' 
     ? weeklySchedules.filter(s => s.completed).length 
+    : activeTab === 'Month'
+    ? monthlySchedules.filter(s => s.completed).length
     : schedules.filter(s => s.completed).length
 
-  const totalTasks = activeTab === 'Week' ? weeklySchedules.length : schedules.length
+  const totalTasks = activeTab === 'Week' 
+    ? weeklySchedules.length 
+    : activeTab === 'Month'
+    ? monthlySchedules.length
+    : schedules.length
 
   const hasTasksOnDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0]
-    return weeklySchedules.some(s => s.schedule_date === dateStr)
+    if (activeTab === 'Week') {
+      return weeklySchedules.some(s => s.schedule_date === dateStr)
+    } else if (activeTab === 'Month') {
+      return monthlySchedules.some(s => s.schedule_date === dateStr)
+    }
+    return false
   }
 
   const isToday = (date: Date) => {
@@ -192,20 +424,33 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) =>
   }
 
   const isSelectedDay = (date: Date) => {
-    return date.toDateString() === selectedWeekDay.toDateString()
+    if (activeTab === 'Week') {
+      return date.toDateString() === selectedWeekDay.toDateString()
+    } else if (activeTab === 'Month') {
+      return date.toDateString() === selectedMonthDay.toDateString()
+    }
+    return false
   }
 
   const renderScheduleItem = ({ item }: { item: Schedule }) => (
     <TouchableOpacity
-      style={styles.taskItem}
-      onPress={() => navigation.navigate('AddEdit', { schedule: item })}
+      style={[styles.taskItem, item.completed && styles.taskItemCompleted]}
+      onPress={() => showTaskActions(item)}
     >
-      <Text style={styles.taskTime}>{formatTime(item.schedule_time)}</Text>
       <View style={styles.taskContent}>
+        <View style={styles.timeSection}>
+          <Text style={[styles.taskTime, item.completed && styles.taskTimeCompleted]}>
+            {formatTime(item.schedule_time)}
+          </Text>
+        </View>
         <View style={styles.taskAccent} />
         <View style={styles.taskDetails}>
-          <Text style={styles.taskTitle}>{item.title}</Text>
-          <Text style={styles.taskCategory}>Physical</Text>
+          <Text style={[styles.taskTitle, item.completed && styles.taskTitleCompleted]}>
+            {item.title}
+          </Text>
+          <Text style={[styles.taskCategory, item.completed && styles.taskCategoryCompleted]}>
+            {(item as any).goalCategory || 'General'}
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -236,13 +481,44 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) =>
           ))}
         </View>
 
+        {/* Category Filter */}
+        <View style={styles.categoryFilterContainer}>
+          <TouchableOpacity
+            style={[styles.categoryFilterTab, !categoryFilter && styles.categoryFilterTabActive]}
+            onPress={() => setCategoryFilter(null)}
+          >
+            <Text style={[styles.categoryFilterText, !categoryFilter && styles.categoryFilterTextActive]}>
+              All Categories
+            </Text>
+          </TouchableOpacity>
+          {(['Physical Health', 'Mental Health', 'Finance', 'Social'] as const).map((category) => (
+            <TouchableOpacity
+              key={category}
+              style={[styles.categoryFilterTab, categoryFilter === category && styles.categoryFilterTabActive]}
+              onPress={() => setCategoryFilter(category)}
+            >
+              <Text style={[styles.categoryFilterText, categoryFilter === category && styles.categoryFilterTextActive]}>
+                {category}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {/* Date Navigation */}
         {activeTab === 'Day' ? (
           <View style={styles.dateNavigation}>
             <TouchableOpacity onPress={() => navigateDate('prev')} style={styles.navArrow}>
               <Text style={styles.navArrowText}>‹</Text>
             </TouchableOpacity>
-            <Text style={styles.currentDate}>{formatDate(currentDate)}</Text>
+            <View style={styles.dateSection}>
+              <Text style={styles.currentDate}>{formatDate(currentDate)}</Text>
+              <TouchableOpacity 
+                style={styles.todayButton}
+                onPress={() => setCurrentDate(new Date())}
+              >
+                <Text style={styles.todayButtonText}>Today</Text>
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity onPress={() => navigateDate('next')} style={styles.navArrow}>
               <Text style={styles.navArrowText}>›</Text>
             </TouchableOpacity>
@@ -254,9 +530,17 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) =>
               <TouchableOpacity onPress={() => navigateDate('prev')} style={styles.navArrow}>
                 <Text style={styles.navArrowText}>‹</Text>
               </TouchableOpacity>
-              <Text style={styles.weekRange}>
-                {formatWeekDate(getWeekStart(currentDate))} - {formatWeekDate(getWeekEnd(currentDate))}
-              </Text>
+              <View style={styles.dateSection}>
+                <Text style={styles.weekRange}>
+                  {formatWeekDate(getWeekStart(currentDate))} - {formatWeekDate(getWeekEnd(currentDate))}
+                </Text>
+                <TouchableOpacity 
+                  style={styles.todayButton}
+                  onPress={() => setCurrentDate(new Date())}
+                >
+                  <Text style={styles.todayButtonText}>Today</Text>
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity onPress={() => navigateDate('next')} style={styles.navArrow}>
                 <Text style={styles.navArrowText}>›</Text>
               </TouchableOpacity>
@@ -297,6 +581,79 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) =>
               </ScrollView>
             </View>
           </>
+        ) : activeTab === 'Month' ? (
+          <>
+            {/* Month Navigation */}
+            <View style={styles.monthNavigation}>
+              <TouchableOpacity onPress={() => navigateDate('prev')} style={styles.navArrow}>
+                <Text style={styles.navArrowText}>‹</Text>
+              </TouchableOpacity>
+              <View style={styles.dateSection}>
+                <Text style={styles.monthTitle}>
+                  {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </Text>
+                <TouchableOpacity 
+                  style={styles.todayButton}
+                  onPress={() => setCurrentDate(new Date())}
+                >
+                  <Text style={styles.todayButtonText}>Today</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity onPress={() => navigateDate('next')} style={styles.navArrow}>
+                <Text style={styles.navArrowText}>›</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Month Calendar */}
+            <View style={styles.monthCalendar}>
+              {/* Week Headers */}
+              <View style={styles.weekHeaders}>
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                  <Text key={day} style={styles.weekHeader}>{day}</Text>
+                ))}
+              </View>
+              
+              {/* Calendar Grid */}
+              <View style={styles.calendarGrid}>
+                {getMonthDays(currentDate).map((day, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.calendarDay,
+                      !isCurrentMonth(day) && styles.calendarDayOtherMonth,
+                      isSelectedDay(day) && styles.calendarDaySelected,
+                      isToday(day) && !isSelectedDay(day) && styles.calendarDayToday
+                    ]}
+                    onPress={() => selectMonthDay(day)}
+                  >
+                    <Text style={[
+                      styles.calendarDayText,
+                      !isCurrentMonth(day) && styles.calendarDayTextOtherMonth,
+                      isToday(day) && !isSelectedDay(day) && styles.calendarDayTextToday,
+                      isSelectedDay(day) && styles.calendarDayTextSelected
+                    ]}>
+                      {day.getDate()}
+                    </Text>
+                    {hasTasksOnDate(day) && (
+                      <View style={styles.calendarTaskIndicator} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            
+            {/* Selected Day Info */}
+            <View style={styles.selectedDayInfo}>
+              <Text style={styles.selectedDayTitle}>
+                {selectedMonthDay.toLocaleDateString('en-US', { 
+                  weekday: 'long',
+                  month: 'long', 
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </Text>
+            </View>
+          </>
         ) : null}
 
         {/* Stats Cards */}
@@ -304,7 +661,7 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) =>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{totalTasks}</Text>
             <Text style={styles.statLabel}>
-              {activeTab === 'Week' ? 'Weekly Tasks' : 'Total Tasks'}
+              {activeTab === 'Week' ? 'Weekly Tasks' : activeTab === 'Month' ? 'Monthly Tasks' : 'Total Tasks'}
             </Text>
           </View>
           <View style={styles.statCard}>
@@ -340,9 +697,61 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) =>
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
 
+      {/* Task Action Sheet */}
+      <Modal
+        visible={showActionSheet}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowActionSheet(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowActionSheet(false)}
+        >
+          <View style={styles.actionSheet}>
+            <View style={styles.actionSheetHeader}>
+              <Text style={styles.actionSheetTitle}>
+                {selectedTask?.title}
+              </Text>
+              <Text style={styles.actionSheetSubtitle}>
+                {selectedTask && formatTime(selectedTask.schedule_time)}
+              </Text>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.actionSheetOption}
+              onPress={handleMarkComplete}
+            >
+              <Text style={styles.actionSheetOptionText}>
+                {selectedTask?.completed ? 'Mark Incomplete' : 'Mark Complete'}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.actionSheetOption}
+              onPress={handleViewEdit}
+            >
+              <Text style={styles.actionSheetOptionText}>
+                View/Edit Details
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.actionSheetOption, styles.actionSheetCancel]}
+              onPress={() => setShowActionSheet(false)}
+            >
+              <Text style={[styles.actionSheetOptionText, styles.actionSheetCancelText]}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Bottom Navigation - LifeTracker Style */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
+      <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
           <View style={styles.navIconContainer}>
             <View style={styles.homeIcon}>
               <View style={styles.homeIconRoof} />
@@ -350,6 +759,19 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) =>
             </View>
           </View>
           <Text style={styles.navLabel}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
+          <View style={styles.navIconContainer}>
+            <View style={styles.categoriesIcon}>
+              <View style={styles.categoriesGrid}>
+                <View style={[styles.categoriesSquare, { backgroundColor: '#FF6B6B' }]} />
+                <View style={[styles.categoriesSquare, { backgroundColor: '#4ECDC4' }]} />
+                <View style={[styles.categoriesSquare, { backgroundColor: '#45B7D1' }]} />
+                <View style={[styles.categoriesSquare, { backgroundColor: '#96CEB4' }]} />
+              </View>
+            </View>
+          </View>
+          <Text style={styles.navLabel}>Categories</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
           <View style={styles.navIconContainer}>
@@ -380,15 +802,6 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation }) =>
             </View>
           </View>
           <Text style={styles.navLabelActive}>Schedule</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.feedbackIcon}>
-              <View style={styles.feedbackBubble} />
-              <View style={styles.feedbackTail} />
-            </View>
-          </View>
-          <Text style={styles.navLabel}>Feedback</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
           <View style={styles.navIconContainer}>
@@ -456,6 +869,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 20,
   },
+  dateSection: {
+    alignItems: 'center',
+    flex: 1,
+  },
   navArrow: {
     padding: 8,
   },
@@ -467,7 +884,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#7C3AED',
-    marginHorizontal: 20,
+    marginBottom: 4,
+  },
+  todayButton: {
+    backgroundColor: '#7C3AED',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  todayButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'white',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -504,27 +932,30 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  taskTime: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    width: 60,
-  },
   taskContent: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginLeft: 20,
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
     padding: 16,
+  },
+  timeSection: {
+    width: 60,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  taskTime: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
   },
   taskAccent: {
     width: 4,
     height: 40,
     backgroundColor: '#10B981',
     borderRadius: 2,
-    marginRight: 16,
+    marginHorizontal: 16,
   },
   taskDetails: {
     flex: 1,
@@ -539,9 +970,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  
+  // Completed task styles
+  taskItemCompleted: {
+    opacity: 0.7,
+  },
+  taskTimeCompleted: {
+    textDecorationLine: 'line-through',
+    color: '#9CA3AF',
+  },
+  taskTitleCompleted: {
+    textDecorationLine: 'line-through',
+    color: '#9CA3AF',
+  },
+  taskCategoryCompleted: {
+    textDecorationLine: 'line-through',
+    color: '#9CA3AF',
+  },
   fab: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 100,
     right: 20,
     width: 56,
     height: 56,
@@ -573,7 +1021,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 0.5,
     borderTopColor: '#E5E7EB',
     paddingTop: 12,
-    paddingBottom: 8,
     paddingHorizontal: 8,
     shadowColor: '#000',
     shadowOffset: {
@@ -781,7 +1228,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#7C3AED',
-    marginHorizontal: 20,
+    marginBottom: 4,
   },
   weekSelector: {
     paddingHorizontal: 20,
@@ -853,5 +1300,197 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#ccc',
     textAlign: 'center',
+  },
+  
+  // Action Sheet Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  actionSheet: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 40,
+  },
+  actionSheetHeader: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  actionSheetTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 4,
+  },
+  actionSheetSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  actionSheetOption: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  actionSheetOptionText: {
+    fontSize: 16,
+    color: '#1a1a1a',
+    textAlign: 'center',
+  },
+  actionSheetCancel: {
+    borderBottomWidth: 0,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  actionSheetCancelText: {
+    color: '#EF4444',
+    fontWeight: '500',
+  },
+
+  // Month View Styles
+  monthNavigation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  monthTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#7C3AED',
+    marginBottom: 4,
+  },
+  monthCalendar: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  weekHeaders: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  weekHeader: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    paddingVertical: 8,
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calendarDay: {
+    width: '14.28%', // 100% / 7 days
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    marginBottom: 4,
+  },
+  calendarDayOtherMonth: {
+    opacity: 0.3,
+  },
+  calendarDaySelected: {
+    backgroundColor: '#7C3AED',
+    borderRadius: 8,
+  },
+  calendarDayToday: {
+    borderWidth: 2,
+    borderColor: '#7C3AED',
+    borderRadius: 8,
+  },
+  calendarDayText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1a1a1a',
+  },
+  calendarDayTextOtherMonth: {
+    color: '#9CA3AF',
+  },
+  calendarDayTextToday: {
+    color: '#7C3AED',
+    fontWeight: '700',
+  },
+  calendarDayTextSelected: {
+    color: 'white',
+    fontWeight: '700',
+  },
+  calendarTaskIndicator: {
+    position: 'absolute',
+    bottom: 2,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#10B981',
+  },
+  selectedDayInfo: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  selectedDayTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    textAlign: 'center',
+  },
+
+  // Category Filter Styles
+  categoryFilterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#f8f9fa',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  categoryFilterTab: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'transparent',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  categoryFilterTabActive: {
+    backgroundColor: '#7C3AED',
+    borderColor: '#7C3AED',
+  },
+  categoryFilterText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  categoryFilterTextActive: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+
+  // Categories Icon - 2x2 Grid
+  categoriesIcon: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  categoriesGrid: {
+    width: 16,
+    height: 16,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  categoriesSquare: {
+    width: 6,
+    height: 6,
+    borderRadius: 1,
+    marginBottom: 2,
   },
 })

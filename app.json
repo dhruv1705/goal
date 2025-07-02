@@ -1,12 +1,13 @@
 {
   "expo": {
-    "name": "daily-schedule-app",
-    "slug": "daily-schedule-app",
+    "name": "GoalTracker Pro",
+    "slug": "goaltracker-pro",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "description": "Smart goal tracking and schedule management app to boost your productivity",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -16,12 +17,16 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.dhruv2050.dailyscheduleapp",
+      "package": "com.dhruv2050.goaltrackerpro",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#7C3AED"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.VIBRATE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

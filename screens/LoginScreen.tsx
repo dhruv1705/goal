@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native'
 import { useAuth } from '../contexts/AuthContext'
+import { PasswordInput } from '../components/PasswordInput'
 
 interface LoginScreenProps {
   navigation: any
@@ -56,14 +57,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           autoCorrect={false}
         />
 
-        <TextInput
+        <PasswordInput
           style={styles.input}
           placeholder="Password"
           value={password}
           onChangeText={setPassword}
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
         />
 
         <TouchableOpacity

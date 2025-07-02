@@ -26,7 +26,7 @@ interface AddEditGoalScreenProps {
   }
 }
 
-const categories = ['Health', 'Career', 'Personal', 'Learning', 'Finance', 'Other']
+const categories = ['Physical Health', 'Mental Health', 'Finance', 'Social']
 
 export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation, route }) => {
   const { user } = useAuth()
@@ -44,7 +44,7 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
 
   const [title, setTitle] = useState(goal?.title || '')
   const [description, setDescription] = useState(goal?.description || '')
-  const [category, setCategory] = useState(goal?.category || 'Personal')
+  const [category, setCategory] = useState(goal?.category || 'Physical Health')
   const [targetDate, setTargetDate] = useState(goal?.target_date ? new Date(goal.target_date) : null)
   const [status, setStatus] = useState(goal?.status || 'active')
   const [loading, setLoading] = useState(false)
@@ -182,39 +182,22 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
 
   const getCategoryIcon = (cat: string) => {
     switch (cat) {
-      case 'Health':
+      case 'Physical Health':
         return (
           <View style={styles.categoryIconContainer}>
-            <View style={styles.healthIcon}>
-              <View style={styles.healthIconHeart} />
-              <View style={styles.healthIconPulse} />
+            <View style={styles.physicalHealthIcon}>
+              <View style={styles.dumbbellWeight} />
+              <View style={styles.dumbbellBar} />
+              <View style={styles.dumbbellWeight} />
             </View>
           </View>
         )
-      case 'Career':
+      case 'Mental Health':
         return (
           <View style={styles.categoryIconContainer}>
-            <View style={styles.careerIcon}>
-              <View style={styles.careerIconBag} />
-              <View style={styles.careerIconHandle} />
-            </View>
-          </View>
-        )
-      case 'Personal':
-        return (
-          <View style={styles.categoryIconContainer}>
-            <View style={styles.personalIcon}>
-              <View style={styles.personalIconStar} />
-              <View style={styles.personalIconCenter} />
-            </View>
-          </View>
-        )
-      case 'Learning':
-        return (
-          <View style={styles.categoryIconContainer}>
-            <View style={styles.learningIcon}>
-              <View style={styles.learningIconBook} />
-              <View style={styles.learningIconPages} />
+            <View style={styles.mentalHealthIcon}>
+              <View style={styles.brainShape} />
+              <View style={styles.brainDetail} />
             </View>
           </View>
         )
@@ -222,17 +205,25 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
         return (
           <View style={styles.categoryIconContainer}>
             <View style={styles.financeIcon}>
-              <View style={styles.financeIconCircle} />
-              <View style={styles.financeIconDollar} />
+              <View style={styles.coinOuter} />
+              <Text style={styles.coinText}>$</Text>
+            </View>
+          </View>
+        )
+      case 'Social':
+        return (
+          <View style={styles.categoryIconContainer}>
+            <View style={styles.socialIcon}>
+              <View style={styles.person} />
+              <View style={[styles.person, { marginLeft: -8 }]} />
             </View>
           </View>
         )
       default:
         return (
           <View style={styles.categoryIconContainer}>
-            <View style={styles.otherIcon}>
-              <View style={styles.otherIconTarget} />
-              <View style={styles.otherIconCenter} />
+            <View style={styles.defaultIcon}>
+              <View style={styles.defaultIconCircle} />
             </View>
           </View>
         )
@@ -838,5 +829,102 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: '#7C3AED',
     borderRadius: 1,
+  },
+
+  // New Category Icon Styles
+  // Physical Health Icon - Dumbbell
+  physicalHealthIcon: {
+    width: 16,
+    height: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dumbbellWeight: {
+    width: 4,
+    height: 8,
+    backgroundColor: '#FF6B6B',
+    borderRadius: 1,
+  },
+  dumbbellBar: {
+    width: 6,
+    height: 1.5,
+    backgroundColor: '#FF6B6B',
+    marginHorizontal: 0.5,
+  },
+
+  // Mental Health Icon - Brain
+  mentalHealthIcon: {
+    width: 16,
+    height: 16,
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  brainShape: {
+    width: 12,
+    height: 10,
+    backgroundColor: '#4ECDC4',
+    borderRadius: 6,
+  },
+  brainDetail: {
+    position: 'absolute',
+    top: 3,
+    left: 3,
+    width: 6,
+    height: 4,
+    backgroundColor: '#FFF',
+    borderRadius: 2,
+  },
+
+  // Finance Icon - Coin (reusing existing styles with updates)
+  coinOuter: {
+    width: 14,
+    height: 14,
+    borderWidth: 1.5,
+    borderColor: '#45B7D1',
+    borderRadius: 7,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    top: 1,
+    left: 1,
+  },
+  coinText: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#45B7D1',
+    position: 'absolute',
+  },
+
+  // Social Icon - People
+  socialIcon: {
+    width: 16,
+    height: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  person: {
+    width: 6,
+    height: 6,
+    backgroundColor: '#96CEB4',
+    borderRadius: 3,
+  },
+
+  // Default Icon
+  defaultIcon: {
+    width: 16,
+    height: 16,
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  defaultIconCircle: {
+    width: 8,
+    height: 8,
+    backgroundColor: '#6B7280',
+    borderRadius: 4,
   },
 })

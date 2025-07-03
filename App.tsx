@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState,useMemo } from 'react'
 import { StatusBar } from 'expo-status-bar'
 import { NavigationContainer } from '@react-navigation/native'
 import { createStackNavigator } from '@react-navigation/stack'
@@ -18,7 +18,9 @@ import { FeedbackScreen } from './screens/FeedbackScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { CategoriesScreen } from './screens/CategoriesScreen'
 import { View, ActivityIndicator, StyleSheet } from 'react-native'
-
+import DarkThemes from './theme/DarkThemes'
+import LightTheme from './theme/LightTheme'
+import {AppContext, AppContextProvider} from './theme/AppContext'
 const Stack = createStackNavigator()
 
 const AuthStack = () => (
@@ -60,6 +62,7 @@ const AppContent = () => {
   const { user, loading: authLoading } = useAuth()
   const { onboardingCompleted, loading: preferencesLoading, refreshPreferences } = usePreferences()
   const [forceMainApp, setForceMainApp] = React.useState(false)
+  const { isDarkTheme } = React.useContext(AppContext)
 
   const loading = authLoading || (user && preferencesLoading)
   const shouldShowOnboarding = user && !onboardingCompleted && !forceMainApp
@@ -78,7 +81,7 @@ const AppContent = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#7C3AED" />
       </View>
     )
   }
@@ -86,7 +89,7 @@ const AppContent = () => {
   console.log(shouldShowOnboarding ? 'Showing onboarding screen' : 'Showing main app navigation')
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={isDarkTheme ? DarkThemes : LightTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {shouldShowOnboarding ? (
           <Stack.Screen 
@@ -130,9 +133,11 @@ const AppContent = () => {
 
 const AppNavigator = () => {
   return (
-    <PreferencesProvider>
-      <AppContent />
-    </PreferencesProvider>
+    <AppContextProvider>
+      <PreferencesProvider>
+        <AppContent />
+      </PreferencesProvider>
+    </AppContextProvider>
   )
 }
 

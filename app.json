@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "GoalTracker Pro",
-    "slug": "goaltracker-pro",
+    "name": "Life Sync",
+    "slug": "daily-schedule-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "description": "Smart goal tracking and schedule management app to boost your productivity",
+    "description": "Life Sync - Smart goal tracking and schedule management app to boost your productivity",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",

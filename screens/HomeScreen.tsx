@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { useFocusEffect } from '@react-navigation/native'
+import React, { useState, useEffect,useContext } from 'react'
+import { useFocusEffect, useTheme } from '@react-navigation/native'
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Animated,
   SafeAreaView,
   Image,
+  Switch,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../contexts/AuthContext'
@@ -18,7 +19,7 @@ import { usePreferences } from '../contexts/PreferencesContext'
 import { supabase } from '../lib/supabase'
 import { Tables } from '../types/supabase'
 import IMAGES from '../assets'
-
+import { AppContext } from '../theme/AppContext'
 
 type Goal = Tables<'goals'>
 type Schedule = Tables<'schedules'>
@@ -44,9 +45,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     weeklyCompletion: 85,
     currentStreak: 5
   })
-
+  const{isDarkTheme,setIsDarkTheme} = useContext(AppContext)
   const today = new Date().toISOString().split('T')[0]
   const currentHour = new Date().getHours()
+  const { colors } = useTheme()
 
   useEffect(() => {
     fetchDashboardData()
@@ -416,35 +418,31 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // Show loading state while fetching data
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="white" />
-        
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
+        <StatusBar barStyle={isDarkTheme ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Home</Text>
+        <View style={[styles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.background }]}> 
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Home</Text>
+          <Switch value={isDarkTheme} onChange={() => { setIsDarkTheme(prev => !prev); }} />
         </View>
-
         <View style={styles.loadingContainer}>
           <View style={styles.loadingSpinner} />
-          <Text style={styles.loadingText}>Loading your dashboard...</Text>
+          <Text style={[styles.loadingText, { color: colors.text }]}>Loading your dashboard...</Text>
         </View>
-
-  
       </SafeAreaView>
     )
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
-
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
+      <StatusBar barStyle={isDarkTheme ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Home</Text>
+      <View style={[styles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.background }]}> 
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Home</Text>
+        <Switch value={isDarkTheme} onChange={() => { setIsDarkTheme(prev => !prev); }} />
       </View>
-
       <ScrollView 
-        style={styles.scrollContainer} 
+        style={[styles.scrollContainer, { backgroundColor: colors.background }]} 
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -456,11 +454,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         ) : (
           <>
             {/* Greeting Section */}
-            <View style={styles.greetingSection}>
-              <Text style={styles.greetingText}>
+            <View style={[styles.greetingSection, { backgroundColor: colors.background }]}> 
+              <Text style={[styles.greetingText, { color: colors.text }]}> 
                 {getGreeting()}, {user?.email?.split('@')[0] || 'there'}!
               </Text>
-              <Text style={styles.dateText}>
+              <Text style={[styles.dateText, { color: colors.text }]}>
                 {new Date().toLocaleDateString('en-US', {
                   weekday: 'long',
                   month: 'long',
@@ -483,7 +481,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     key={category.category}
                     style={[
                       styles.categoryQuickCard,
-                      category.is_primary && styles.categoryQuickCardPrimary,
+                      { backgroundColor: colors.card, borderColor: colors.border },
+                      category.is_primary && { },
                       index === 0 && styles.categoryQuickCardFirst
                     ]}
                     onPress={() => navigation.navigate('Goals', { categoryFilter: category.category })}
@@ -491,10 +490,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     <View style={[styles.categoryQuickIcon, { backgroundColor: category.color }]}>
                       <Text style={styles.categoryQuickEmoji}>{category.icon}</Text>
                     </View>
-                    <Text style={[
-                      styles.categoryQuickName,
-                      category.is_primary && styles.categoryQuickNamePrimary
-                    ]}>
+                    <Text
+                      style={[
+                        styles.categoryQuickName,
+                        category.is_primary && styles.categoryQuickNamePrimary,
+                        { color: colors.text }
+                      ]}
+                    >
                       {category.category}
                     </Text>
                     {category.is_primary && (
@@ -516,16 +518,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         {stats.totalToday > 0 && (
           <View style={styles.progressSection}>
             <TouchableOpacity 
-              style={styles.progressCard}
+              style={[styles.progressCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => navigation.navigate('Schedule')}
             >
               {renderProgressRing()}
               <View style={styles.progressInfo}>
-                <Text style={styles.progressTitle}>Today's Progress</Text>
-                <Text style={styles.progressSubtitle}>
+                <Text style={[styles.progressTitle, { color: colors.text }]}>Today's Progress</Text>
+                <Text style={[styles.progressSubtitle, { color: colors.text }]}>
                   {stats.completedToday} of {stats.totalToday} tasks complete
                 </Text>
-                <Text style={styles.motivationalText}>
+                <Text style={[styles.motivationalText, { color: colors.primary }]}>
                   {getMotivationalMessage()}
                 </Text>
               </View>
@@ -537,28 +539,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.statsSection}>
           <View style={styles.statsRow}>
             <TouchableOpacity 
-              style={styles.statCard}
+              style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => navigation.navigate('Goals')}
             >
-              <Text style={styles.statNumber}>{stats.activeGoalsCount}</Text>
-              <Text style={styles.statLabel}>Active Goals</Text>
+              <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.activeGoalsCount}</Text>
+              <Text style={[styles.statLabel, { color: colors.text }]}>Active Goals</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={styles.statCard}
+              style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => navigation.navigate('Schedule')}
             >
-              <Text style={styles.statNumber}>{stats.totalToday}</Text>
-              <Text style={styles.statLabel}>Today's Tasks</Text>
+              <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.totalToday}</Text>
+              <Text style={[styles.statLabel, { color: colors.text }]}>Today's Tasks</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.weeklyCompletion}%</Text>
-              <Text style={styles.statLabel}>This Week</Text>
+            <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+              <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.weeklyCompletion}%</Text>
+              <Text style={[styles.statLabel, { color: colors.text }]}>This Week</Text>
             </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.currentStreak}</Text>
-              <Text style={styles.statLabel}>Day Streak</Text>
+            <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+              <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.currentStreak}</Text>
+              <Text style={[styles.statLabel, { color: colors.text }]}>Day Streak</Text>
             </View>
           </View>
         </View>
@@ -573,7 +575,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               </TouchableOpacity>
             </View>
             {todayTasks.slice(0, 3).map((task) => (
-              <View key={task.id} style={styles.taskItem}>
+              <View key={task.id} style={[styles.taskItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={styles.taskInfo}>
                   <Text style={styles.taskTime}>{formatTime(task.schedule_time)}</Text>
                   <View style={styles.taskContent}>
@@ -605,7 +607,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         {activeGoals.length > 0 && (
           <View style={styles.goalsSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Your Active Goals</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Active Goals</Text>
               <TouchableOpacity onPress={() => navigation.navigate('Goals')}>
                 <Text style={styles.sectionLink}>View All</Text>
               </TouchableOpacity>
@@ -613,17 +615,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             {activeGoals.map((goal) => (
               <TouchableOpacity
                 key={goal.id}
-                style={styles.goalItem}
+                style={[styles.goalItem, { backgroundColor: colors.card, borderColor: colors.border }]}
                 onPress={() => navigation.navigate('GoalDetail', { goal })}
               >
                 <View style={styles.goalIcon}>
                   {getCategoryIcon(goal.category)}
                 </View>
                 <View style={styles.goalInfo}>
-                  <Text style={styles.goalTitle}>{goal.title}</Text>
-                  <Text style={styles.goalCategory}>{goal.category || 'General'}</Text>
+                  <Text style={[styles.goalTitle, { color: colors.text }]}>{goal.title}</Text>
+                  <Text style={[styles.goalCategory, { color: colors.primary }]}>{goal.category || 'General'}</Text>
                   {goal.target_date && (
-                    <Text style={styles.goalTarget}>
+                    <Text style={[styles.goalTarget, { color: colors.text }]}> 
                       Target: {new Date(goal.target_date).toLocaleDateString()}
                     </Text>
                   )}
@@ -652,17 +654,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.actionsGrid}>
             <TouchableOpacity
-              style={[styles.actionCard, styles.actionCardPrimary]}
+              style={[styles.actionCard, styles.actionCardPrimary, { backgroundColor: colors.primary }]}
               onPress={() => navigation.navigate('AddEdit')}
             >
               <View style={styles.actionIcon}>
                 <View style={styles.plusIcon} />
                 <View style={styles.plusIconVertical} />
               </View>
-              <Text style={styles.actionTextPrimary}>Add Task</Text>
+              <Text style={[styles.actionTextPrimary, { color: '#fff' }]}>Add Task</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.actionCard}
+              style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => navigation.navigate('AddEditGoal')}
             >
               <View style={styles.actionIcon}>
@@ -671,12 +673,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   <View style={styles.goalActionCenter} />
                 </View>
               </View>
-              <Text style={styles.actionText}>Add Goal</Text>
+              <Text style={[styles.actionText, { color: colors.text }]}>Add Goal</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.actionsGrid}>
             <TouchableOpacity
-              style={styles.actionCard}
+              style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => navigation.navigate('Schedule')}
             >
               <View style={styles.actionIcon}>
@@ -685,10 +687,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   <View style={styles.calendarActionBody} />
                 </View>
               </View>
-              <Text style={styles.actionText}>View Schedule</Text>
+              <Text style={[styles.actionText, { color: colors.text }]}>View Schedule</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.actionCard}
+              style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => navigation.navigate('Feedback')}
             >
               <View style={styles.actionIcon}>
@@ -697,7 +699,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   <View style={styles.feedbackActionTail} />
                 </View>
               </View>
-              <Text style={styles.actionText}>Quick Note</Text>
+              <Text style={[styles.actionText, { color: colors.text }]}>Quick Note</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -705,18 +707,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         {/* Insights */}
         <View style={styles.insightsSection}>
           <Text style={styles.sectionTitle}>Insights</Text>
-          <View style={styles.insightCard}>
+          <View style={[styles.insightCard, { backgroundColor: colors.card, borderColor: colors.border }]}> 
             <Text style={styles.insightEmoji}>🔥</Text>
             <View style={styles.insightContent}>
-              <Text style={styles.insightTitle}>{stats.currentStreak}-day completion streak!</Text>
-              <Text style={styles.insightSubtext}>Keep up the great work!</Text>
+              <Text style={[styles.insightTitle, { color: colors.text }]}>{stats.currentStreak}-day completion streak!</Text>
+              <Text style={[styles.insightSubtext, { color: colors.text }]}>Keep up the great work!</Text>
             </View>
           </View>
-          <View style={styles.insightCard}>
+          <View style={[styles.insightCard, { backgroundColor: colors.card, borderColor: colors.border }]}> 
             <Text style={styles.insightEmoji}>📊</Text>
             <View style={styles.insightContent}>
-              <Text style={styles.insightTitle}>You completed {stats.weeklyCompletion}% of tasks this week</Text>
-              <Text style={styles.insightSubtext}>Above your average!</Text>
+              <Text style={[styles.insightTitle, { color: colors.text }]}>You completed {stats.weeklyCompletion}% of tasks this week</Text>
+              <Text style={[styles.insightSubtext, { color: colors.text }]}>Above your average!</Text>
             </View>
           </View>
         </View>
@@ -727,26 +729,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       </ScrollView>
 
       {/* Bottom Navigation */}
-      <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
+      <View style={[styles.bottomNav, { backgroundColor: colors.card, paddingBottom: Math.max(8, insets.bottom) }]}> 
         <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor="#7C3AED" />
-          <Text style={styles.navLabelActive}>Home</Text>
+          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor={colors.primary} />
+          <Text style={[styles.navLabelActive, { color: colors.primary }]}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
-          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
-          <Text style={styles.navLabel}>Categories</Text>
+          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Categories</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
-          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
-          <Text style={styles.navLabel}>Goals</Text>
+          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Goals</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
-          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
-          <Text style={styles.navLabel}>Schedule</Text>
+          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Schedule</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
-          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
-          <Text style={styles.navLabel}>Profile</Text>
+          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Profile</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -766,7 +768,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
   },
   navItem: {
     alignItems: 'center',
@@ -848,9 +849,6 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   categoryQuickCardPrimary: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#7C3AED',
-    borderWidth: 2,
     shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -879,7 +877,6 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   categoryQuickNamePrimary: {
-    color: '#7C3AED',
     fontWeight: '600',
   },
   primaryIndicator: {

@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 8,
     paddingHorizontal: 16,
-    paddingRight: 50, // Space for eye icon
+    paddingRight: 50, 
     backgroundColor: '#f9f9f9',
     fontSize: 16,
     color: '#1a1a1a',

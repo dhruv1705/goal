@@ -9,6 +9,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native'
+import { useTheme } from '@react-navigation/native'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -29,6 +30,7 @@ export const AddEditScheduleScreen: React.FC<AddEditScheduleScreenProps> = ({
   navigation,
   route,
 }) => {
+  const { colors } = useTheme()
   const { user } = useAuth()
   const schedule = route.params?.schedule
   const isEditing = !!schedule
@@ -147,47 +149,64 @@ export const AddEditScheduleScreen: React.FC<AddEditScheduleScreenProps> = ({
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.cancelButton}>Cancel</Text>
+          <Text style={[styles.cancelButton, { color: colors.primary }]}>Cancel</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
           {isEditing ? 'Edit Schedule' : 'Add Schedule'}
         </Text>
         <TouchableOpacity onPress={handleSave} disabled={loading}>
-          <Text style={[styles.saveButton, loading && styles.buttonDisabled]}>
+          <Text style={[
+            styles.saveButton, 
+            { color: colors.primary },
+            loading && { color: colors.text + '50' }
+          ]}>
             {loading ? 'Saving...' : 'Save'}
           </Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.form}>
-        <Text style={styles.label}>Title *</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Title *</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { 
+            backgroundColor: colors.card, 
+            borderColor: colors.border, 
+            color: colors.text 
+          }]}
           value={title}
           onChangeText={setTitle}
           placeholder="Enter schedule title"
+          placeholderTextColor={colors.text + '80'}
           multiline={false}
         />
 
-        <Text style={styles.label}>Description</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Description</Text>
         <TextInput
-          style={[styles.input, styles.textArea]}
+          style={[styles.input, styles.textArea, { 
+            backgroundColor: colors.card, 
+            borderColor: colors.border, 
+            color: colors.text 
+          }]}
           value={description}
           onChangeText={setDescription}
           placeholder="Enter description (optional)"
+          placeholderTextColor={colors.text + '80'}
           multiline={true}
           numberOfLines={3}
         />
 
-        <Text style={styles.label}>Date</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Date</Text>
         <TouchableOpacity
-          style={styles.dateTimeButton}
+          style={[styles.dateTimeButton, { 
+            backgroundColor: colors.card, 
+            borderColor: colors.border 
+          }]}
           onPress={() => setShowDatePicker(true)}
         >
-          <Text style={styles.dateTimeText}>
+          <Text style={[styles.dateTimeText, { color: colors.text }]}>
             {date.toLocaleDateString('en-US', {
               weekday: 'long',
               year: 'numeric',
@@ -197,12 +216,15 @@ export const AddEditScheduleScreen: React.FC<AddEditScheduleScreenProps> = ({
           </Text>
         </TouchableOpacity>
 
-        <Text style={styles.label}>Time</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Time</Text>
         <TouchableOpacity
-          style={styles.dateTimeButton}
+          style={[styles.dateTimeButton, { 
+            backgroundColor: colors.card, 
+            borderColor: colors.border 
+          }]}
           onPress={() => setShowTimePicker(true)}
         >
-          <Text style={styles.dateTimeText}>
+          <Text style={[styles.dateTimeText, { color: colors.text }]}>
             {time.toLocaleTimeString('en-US', {
               hour: 'numeric',
               minute: '2-digit',
@@ -246,7 +268,6 @@ export const AddEditScheduleScreen: React.FC<AddEditScheduleScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   header: {
     flexDirection: 'row',
@@ -254,26 +275,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     paddingTop: 60,
-    backgroundColor: 'white',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
   },
   cancelButton: {
-    color: '#007AFF',
+    color: '#7C3AED',
     fontSize: 16,
   },
   saveButton: {
-    color: '#007AFF',
+    color: '#7C3AED',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  buttonDisabled: {
-    color: '#ccc',
   },
   form: {
     padding: 20,
@@ -281,14 +296,11 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 8,
     marginTop: 16,
   },
   input: {
-    backgroundColor: 'white',
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
@@ -298,15 +310,12 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   dateTimeButton: {
-    backgroundColor: 'white',
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     padding: 16,
   },
   dateTimeText: {
     fontSize: 16,
-    color: '#333',
   },
   deleteButton: {
     backgroundColor: '#FF3B30',

@@ -10,11 +10,13 @@ import {
   RefreshControl,
   StatusBar,
   ScrollView,
+  Image
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Tables } from '../types/supabase'
+import IMAGES from '../assets'
 
 type Goal = Tables<'goals'>
 
@@ -340,64 +342,23 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
       {/* Bottom Navigation */}
       <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.homeIcon}>
-              <View style={styles.homeIconRoof} />
-              <View style={styles.homeIconBody} />
-            </View>
-          </View>
+          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
           <Text style={styles.navLabel}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.categoriesIcon}>
-              <View style={styles.categoriesGrid}>
-                <View style={[styles.categoriesSquare, { backgroundColor: '#FF6B6B' }]} />
-                <View style={[styles.categoriesSquare, { backgroundColor: '#4ECDC4' }]} />
-                <View style={[styles.categoriesSquare, { backgroundColor: '#45B7D1' }]} />
-                <View style={[styles.categoriesSquare, { backgroundColor: '#96CEB4' }]} />
-              </View>
-            </View>
-          </View>
+          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
           <Text style={styles.navLabel}>Categories</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.goalsIcon}>
-              <View style={styles.goalsFlagPole} />
-              <View style={styles.goalsFlagBody} />
-            </View>
-          </View>
+          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor="#7C3AED" />
           <Text style={styles.navLabelActive}>Goals</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.scheduleIcon}>
-              <View style={styles.scheduleCalendarBody} />
-              <View style={styles.scheduleCalendarTop} />
-              <View style={styles.scheduleGridContainer}>
-                <View style={styles.scheduleGridRow}>
-                  <View style={styles.scheduleGridDot} />
-                  <View style={styles.scheduleGridDot} />
-                  <View style={styles.scheduleGridDot} />
-                </View>
-                <View style={styles.scheduleGridRow}>
-                  <View style={styles.scheduleGridDot} />
-                  <View style={styles.scheduleGridDot} />
-                  <View style={styles.scheduleGridDot} />
-                </View>
-              </View>
-            </View>
-          </View>
+          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
           <Text style={styles.navLabel}>Schedule</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.profileIcon}>
-              <View style={styles.profileHead} />
-              <View style={styles.profileBody} />
-            </View>
-          </View>
+          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
       </View>
@@ -406,6 +367,15 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
 }
 
 const styles = StyleSheet.create({
+  navIcon: {
+    width: 24,
+    height: 24,
+    marginBottom: 4,
+    opacity: 0.6,
+  },
+  navIconActive: {
+    opacity: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',

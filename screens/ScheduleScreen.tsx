@@ -814,9 +814,9 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
           <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={colors.primary}/>
           <Text style={[styles.navLabelActive, { color: colors.primary }]}>Schedule</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
-          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
-          <Text style={[styles.navLabel, { color: colors.text }]}>Profile</Text>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Talk')}>
+          <Image source={IMAGES.TALK} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
+          <Text style={[styles.navLabel, { color: colors.text }]}>Talk</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -36,6 +36,7 @@ interface GoalDetailScreenProps {
 export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, route }) => {
   const { goal } = route.params
   const { user } = useAuth()
+  const { colors } = useTheme()
   const insets = useSafeAreaInsets()
   const [tasks, setTasks] = useState<Schedule[]>([])
   const [loading, setLoading] = useState(true)
@@ -58,8 +59,6 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showTimePicker, setShowTimePicker] = useState(false)
   const [showRecurrenceEndDatePicker, setShowRecurrenceEndDatePicker] = useState(false)
-
-  const { colors } = useTheme()
 
   useEffect(() => {
     fetchTasks()
@@ -842,24 +841,24 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
       {/* Bottom Navigation */}
       <View style={[styles.bottomNav, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(8, insets.bottom) }]}>
         <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Home')}>
-          <Image source={IMAGES.HOME} style={styles.navIcon} tintColor={"#808080"} />
-          <Text style={styles.navLabel}>Home</Text>
+          <Image source={IMAGES.HOME} style={styles.navIcon} tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Categories')}>
-          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} tintColor={"#808080"} />
-          <Text style={styles.navLabel}>Categories</Text>
+          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Categories</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Goals')}>
-          <Image source={IMAGES.GOALS} style={styles.navIcon} tintColor={"#808080"} />
-          <Text style={styles.navLabel}>Goals</Text>
+          <Image source={IMAGES.GOALS} style={styles.navIcon} tintColor={colors.primary} />
+          <Text style={[styles.navLabel, { color: colors.primary }]}>Goals</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Schedule')}>
-          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} tintColor={"#808080"} />
-          <Text style={styles.navLabel}>Schedule</Text>
+          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Schedule</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Profile')}>
-          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} tintColor={"#808080"} />
-          <Text style={styles.navLabel}>Profile</Text>
+          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Profile</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -90,7 +90,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     {
       title: 'About',
       iconType: 'about',
-      onPress: () => Alert.alert('About', 'Daily Schedule App v1.0'),
+      onPress: () => Alert.alert('About', 'Life Sync App v1.0'),
     },
   ]
 

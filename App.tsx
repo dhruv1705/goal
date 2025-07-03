@@ -81,7 +81,7 @@ const AppContent = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#7C3AED" />
       </View>
     )
   }

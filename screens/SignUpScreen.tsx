@@ -44,7 +44,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
       await signUp(email, password)
       Alert.alert(
         'Success',
-        'Account created successfully! Welcome to Daily Schedule.'
+        'Account created successfully! Welcome to Life Sync.'
       )
     } catch (error: any) {
       Alert.alert('Sign Up Failed', error.message)
@@ -60,7 +60,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
     >
       <View style={styles.form}>
         <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Sign up for Daily Schedule</Text>
+        <Text style={styles.subtitle}>Sign up for Life Sync</Text>
 
         <TextInput
           style={styles.input}
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#7C3AED',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: {
-    color: '#007AFF',
+    color: '#7C3AED',
     fontSize: 16,
   },
 })

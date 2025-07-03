@@ -44,7 +44,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.form}>
-        <Text style={styles.title}>Daily Schedule</Text>
+        <Text style={styles.title}>Life Sync</Text>
         <Text style={styles.subtitle}>Sign in to your account</Text>
 
         <TextInput
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#7C3AED',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: {
-    color: '#007AFF',
+    color: '#7C3AED',
     fontSize: 16,
   },
 })

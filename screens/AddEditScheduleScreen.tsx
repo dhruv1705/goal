@@ -282,9 +282,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   cancelButton: {
+    color: '#7C3AED',
     fontSize: 16,
   },
   saveButton: {
+    color: '#7C3AED',
     fontSize: 16,
     fontWeight: 'bold',
   },

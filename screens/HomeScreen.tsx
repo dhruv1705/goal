@@ -735,20 +735,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <Text style={[styles.navLabelActive, { color: colors.primary }]}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
-          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
-          <Text style={[styles.navLabel, { color: colors.text }]}>Categories</Text>
+          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor={isDarkTheme ? '#9CA3AF' : '#6B7280'} />
+          <Text style={[styles.navLabel, { color: isDarkTheme ? '#9CA3AF' : '#6B7280' }]}>Categories</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
-          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
-          <Text style={[styles.navLabel, { color: colors.text }]}>Goals</Text>
+          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor={isDarkTheme ? '#9CA3AF' : '#6B7280'} />
+          <Text style={[styles.navLabel, { color: isDarkTheme ? '#9CA3AF' : '#6B7280' }]}>Goals</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
-          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
-          <Text style={[styles.navLabel, { color: colors.text }]}>Schedule</Text>
+          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={isDarkTheme ? '#9CA3AF' : '#6B7280'} />
+          <Text style={[styles.navLabel, { color: isDarkTheme ? '#9CA3AF' : '#6B7280' }]}>Schedule</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
-          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
-          <Text style={[styles.navLabel, { color: colors.text }]}>Profile</Text>
+          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor={isDarkTheme ? '#9CA3AF' : '#6B7280'} />
+          <Text style={[styles.navLabel, { color: isDarkTheme ? '#9CA3AF' : '#6B7280' }]}>Profile</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

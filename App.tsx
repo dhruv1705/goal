@@ -30,33 +30,6 @@ const AuthStack = () => (
   </Stack.Navigator>
 )
 
-const MainStack = () => (
-  <Stack.Navigator 
-    initialRouteName="Home"
-    screenOptions={{ headerShown: false }}
-  >
-    <Stack.Screen name="Home" component={HomeScreen} />
-    <Stack.Screen name="Categories" component={CategoriesScreen} />
-    <Stack.Screen name="Schedule" component={ScheduleScreen} />
-    <Stack.Screen name="AddEdit" component={AddEditScheduleScreen} />
-    <Stack.Screen name="Profile" component={ProfileScreen} />
-    <Stack.Screen name="Goals" component={GoalsScreen} />
-    <Stack.Screen name="AddEditGoal" component={AddEditGoalScreen} />
-    <Stack.Screen name="GoalDetail" component={GoalDetailScreen} />
-    <Stack.Screen name="Feedback" component={FeedbackScreen} />
-    <Stack.Screen 
-      name="Onboarding" 
-      children={(props) => (
-        <OnboardingScreen 
-          {...props} 
-          onComplete={() => {
-            props.navigation.goBack()
-          }} 
-        />
-      )}
-    />
-  </Stack.Navigator>
-)
 
 const AppContent = () => {
   const { user, loading: authLoading } = useAuth()
@@ -119,6 +92,19 @@ const AppContent = () => {
             <Stack.Screen name="AddEditGoal" component={AddEditGoalScreen} />
             <Stack.Screen name="GoalDetail" component={GoalDetailScreen} />
             <Stack.Screen name="Feedback" component={FeedbackScreen} />
+            <Stack.Screen 
+              name="Onboarding" 
+              children={(props) => (
+                <OnboardingScreen 
+                  {...props} 
+                  onComplete={() => {
+                    console.log('🎯 Onboarding onComplete (preference update) - going back')
+                    refreshPreferences()
+                    props.navigation.goBack()
+                  }} 
+                />
+              )}
+            />
           </>
         ) : (
           <>

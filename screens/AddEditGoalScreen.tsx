@@ -10,6 +10,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native'
+import { useTheme } from '@react-navigation/native'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
@@ -30,19 +31,18 @@ interface AddEditGoalScreenProps {
 const categories = ['Physical Health', 'Mental Health', 'Finance', 'Social']
 
 export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation, route }) => {
+  const { colors } = useTheme()
   const { user } = useAuth()
   const { primaryCategory, getOrderedCategories } = usePreferences()
   const goal = route?.params?.goal
   const isEditing = !!goal
 
-  // Smart default category selection based on user preferences
   const getDefaultCategory = () => {
-    if (goal?.category) return goal.category // If editing, use existing category
-    if (primaryCategory) return primaryCategory // Use user's primary category
-    return 'Physical Health' // Fallback to first category
+    if (goal?.category) return goal.category 
+    if (primaryCategory) return primaryCategory 
+    return 'Physical Health' 
   }
 
-  // Debug: Log user info when component mounts
   useEffect(() => {
     console.log('AddEditGoalScreen - User info:', {
       userId: user?.id,
@@ -97,12 +97,10 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
           console.error('Update error:', error)
           throw error
         }
-        console.log('Updated goal:', data)
         
-        // Navigate back immediately without showing alert for better UX  
         navigation.navigate('Goals', { 
           refresh: Date.now(),
-          updatedGoal: data[0] // Pass the updated goal data
+          updatedGoal: data[0] 
         })
       } else {
         const { data, error } = await supabase
@@ -117,12 +115,10 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
           console.error('Insert error:', error)
           throw error
         }
-        console.log('Created goal:', data)
         
-        // Navigate back immediately without showing alert for better UX
         navigation.navigate('Goals', { 
           refresh: Date.now(),
-          newGoal: data[0] // Pass the new goal data for optimistic update
+          newGoal: data[0] 
         })
       }
     } catch (error: any) {
@@ -148,13 +144,11 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
           onPress: async () => {
             setLoading(true)
             try {
-              // First delete associated schedules
               await supabase
                 .from('schedules')
                 .delete()
                 .eq('goal_id', goal.id)
 
-              // Then delete the goal
               const { error } = await supabase
                 .from('goals')
                 .delete()
@@ -242,43 +236,51 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={colors.text === '#ffffff' ? "light-content" : "dark-content"} backgroundColor={colors.background} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>‹</Text>
+          <Text style={[styles.backButtonText, { color: colors.primary }]}>‹</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
           {isEditing ? 'Edit Goal' : 'New Goal'}
         </Text>
         <View style={styles.headerRight} />
       </View>
 
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.scrollContainer, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
         {/* Goal Title */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Goal Title *</Text>
+        <View style={[styles.section, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.text }]}>Goal Title *</Text>
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, { 
+              backgroundColor: colors.card, 
+              borderColor: colors.border, 
+              color: colors.text 
+            }]}
             value={title}
             onChangeText={setTitle}
             placeholder="What do you want to achieve?"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colors.text + '80'}
             maxLength={100}
           />
         </View>
 
         {/* Goal Description */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Description</Text>
+        <View style={[styles.section, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.text }]}>Description</Text>
           <TextInput
-            style={[styles.textInput, styles.textArea]}
+            style={[styles.textInput, styles.textArea, { 
+              backgroundColor: colors.card, 
+              borderColor: colors.border, 
+              color: colors.text 
+            }]}
             value={description}
             onChangeText={setDescription}
             placeholder="Describe your goal in detail..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colors.text + '80'}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
@@ -287,11 +289,11 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
         </View>
 
         {/* Category Selection */}
-        <View style={styles.section}>
-          <Text style={styles.label}>
+        <View style={[styles.section, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.text }]}>
             Category
             {primaryCategory && (
-              <Text style={styles.labelHint}> (Default: {primaryCategory})</Text>
+              <Text style={[styles.labelHint, { color: colors.text + '80' }]}> (Default: {primaryCategory})</Text>
             )}
           </Text>
           <View style={styles.categoryGrid}>
@@ -300,16 +302,21 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
                 key={categoryInfo.category}
                 style={[
                   styles.categoryItem,
-                  category === categoryInfo.category && styles.categoryItemActive,
-                  categoryInfo.is_primary && styles.categoryItemPrimary
+                  { 
+                    backgroundColor: colors.card, 
+                    borderColor: colors.border 
+                  },
+                  category === categoryInfo.category && { backgroundColor: colors.primary, borderColor: colors.primary },
+                  categoryInfo.is_primary && { borderColor: colors.primary, borderWidth: 2, backgroundColor: colors.card }
                 ]}
                 onPress={() => setCategory(categoryInfo.category)}
               >
                 {getCategoryIcon(categoryInfo.category)}
                 <Text style={[
                   styles.categoryText,
-                  category === categoryInfo.category && styles.categoryTextActive,
-                  categoryInfo.is_primary && styles.categoryTextPrimary
+                  { color: colors.text },
+                  category === categoryInfo.category && { color: 'white', fontWeight: '600' },
+                  categoryInfo.is_primary && { color: colors.primary, fontWeight: '600' }
                 ]}>
                   {categoryInfo.category}
                   {categoryInfo.is_primary && ' ⭐'}
@@ -320,26 +327,30 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
         </View>
 
         {/* Target Date */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Target Date (Optional)</Text>
+        <View style={[styles.section, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.text }]}>Target Date (Optional)</Text>
           <TouchableOpacity
-            style={styles.dateButton}
+            style={[styles.dateButton, { 
+              backgroundColor: colors.card, 
+              borderColor: colors.border 
+            }]}
             onPress={() => setShowDatePicker(true)}
           >
             <Text style={[
               styles.dateButtonText,
-              !targetDate && styles.dateButtonPlaceholder
+              { color: colors.text },
+              !targetDate && { color: colors.text + '80' }
             ]}>
               {formatDateDisplay(targetDate)}
             </Text>
             <View style={styles.datePickerIcon}>
               <View style={styles.calendarIcon}>
-                <View style={styles.calendarTop} />
-                <View style={styles.calendarBody} />
+                <View style={[styles.calendarTop, { backgroundColor: colors.primary }]} />
+                <View style={[styles.calendarBody, { borderColor: colors.primary }]} />
                 <View style={styles.calendarGrid}>
-                  <View style={styles.calendarDot} />
-                  <View style={styles.calendarDot} />
-                  <View style={styles.calendarDot} />
+                  <View style={[styles.calendarDot, { backgroundColor: colors.primary }]} />
+                  <View style={[styles.calendarDot, { backgroundColor: colors.primary }]} />
+                  <View style={[styles.calendarDot, { backgroundColor: colors.primary }]} />
                 </View>
               </View>
             </View>
@@ -356,21 +367,26 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
 
         {/* Status (only for editing) */}
         {isEditing && (
-          <View style={styles.section}>
-            <Text style={styles.label}>Status</Text>
+          <View style={[styles.section, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.label, { color: colors.text }]}>Status</Text>
             <View style={styles.statusGrid}>
               {(['active', 'paused', 'completed'] as const).map((stat) => (
                 <TouchableOpacity
                   key={stat}
                   style={[
                     styles.statusItem,
-                    status === stat && styles.statusItemActive
+                    { 
+                      backgroundColor: colors.card, 
+                      borderColor: colors.border 
+                    },
+                    status === stat && { backgroundColor: colors.primary, borderColor: colors.primary }
                   ]}
                   onPress={() => setStatus(stat)}
                 >
                   <Text style={[
                     styles.statusText,
-                    status === stat && styles.statusTextActive
+                    { color: colors.text },
+                    status === stat && { color: 'white', fontWeight: '600' }
                   ]}>
                     {stat.charAt(0).toUpperCase() + stat.slice(1)}
                   </Text>
@@ -383,7 +399,11 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
         {/* Action Buttons */}
         <View style={styles.actionSection}>
           <TouchableOpacity
-            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+            style={[
+              styles.saveButton,
+              { backgroundColor: colors.primary },
+              loading && styles.saveButtonDisabled
+            ]}
             onPress={handleSave}
             disabled={loading}
           >
@@ -423,7 +443,6 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   header: {
     flexDirection: 'row',
@@ -432,9 +451,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 15,
-    backgroundColor: 'white',
     borderBottomWidth: 0.5,
-    borderBottomColor: '#E5E7EB',
   },
   backButton: {
     padding: 8,
@@ -442,42 +459,34 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 28,
-    color: '#7C3AED',
     fontWeight: '300',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1a1a1a',
   },
   headerRight: {
     width: 44,
   },
   scrollContainer: {
     flex: 1,
-    backgroundColor: 'white',
   },
   section: {
     paddingHorizontal: 20,
     paddingVertical: 20,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#F3F4F6',
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 12,
   },
   textInput: {
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#1F2937',
   },
   textArea: {
     height: 100,
@@ -490,9 +499,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   dateButton: {
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -502,10 +509,6 @@ const styles = StyleSheet.create({
   },
   dateButtonText: {
     fontSize: 16,
-    color: '#1F2937',
-  },
-  dateButtonPlaceholder: {
-    color: '#9CA3AF',
   },
   dateButtonIcon: {
     fontSize: 18,
@@ -527,18 +530,12 @@ const styles = StyleSheet.create({
   categoryItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     margin: 6,
     minWidth: 100,
-  },
-  categoryItemActive: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#7C3AED',
   },
   categoryEmoji: {
     fontSize: 18,
@@ -547,24 +544,9 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#374151',
-  },
-  categoryTextActive: {
-    color: 'white',
-    fontWeight: '600',
-  },
-  categoryItemPrimary: {
-    borderColor: '#7C3AED',
-    borderWidth: 2,
-    backgroundColor: '#F8F7FF',
-  },
-  categoryTextPrimary: {
-    color: '#7C3AED',
-    fontWeight: '600',
   },
   labelHint: {
     fontSize: 12,
-    color: '#6B7280',
     fontWeight: '400',
   },
   statusGrid: {
@@ -573,37 +555,24 @@ const styles = StyleSheet.create({
   },
   statusItem: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     margin: 6,
   },
-  statusItemActive: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#7C3AED',
-  },
   statusText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#374151',
-  },
-  statusTextActive: {
-    color: 'white',
-    fontWeight: '600',
   },
   actionSection: {
     paddingHorizontal: 20,
     paddingTop: 30,
   },
   saveButton: {
-    backgroundColor: '#7C3AED',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#7C3AED',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -828,7 +797,6 @@ const styles = StyleSheet.create({
   calendarTop: {
     width: 16,
     height: 3,
-    backgroundColor: '#7C3AED',
     borderTopLeftRadius: 2,
     borderTopRightRadius: 2,
     position: 'absolute',
@@ -838,7 +806,6 @@ const styles = StyleSheet.create({
     width: 16,
     height: 12,
     borderWidth: 1.5,
-    borderColor: '#7C3AED',
     borderTopWidth: 0,
     borderRadius: 2,
     borderTopLeftRadius: 0,
@@ -860,12 +827,9 @@ const styles = StyleSheet.create({
   calendarDot: {
     width: 2,
     height: 2,
-    backgroundColor: '#7C3AED',
     borderRadius: 1,
   },
 
-  // New Category Icon Styles
-  // Physical Health Icon - Dumbbell
   physicalHealthIcon: {
     width: 16,
     height: 16,
@@ -886,7 +850,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 0.5,
   },
 
-  // Mental Health Icon - Brain
   mentalHealthIcon: {
     width: 16,
     height: 16,
@@ -910,7 +873,6 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
 
-  // Finance Icon - Coin (reusing existing styles with updates)
   coinOuter: {
     width: 14,
     height: 14,

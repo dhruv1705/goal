@@ -10,10 +10,10 @@ import {
   Image
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useTheme } from '@react-navigation/native'
 import { useAuth } from '../contexts/AuthContext'
 import IMAGES from '../assets'
 import { usePreferences } from '../contexts/PreferencesContext'
-
 
 interface ProfileScreenProps {
   navigation: any
@@ -23,6 +23,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const { user, signOut } = useAuth()
   const { primaryCategory, secondaryCategories, refreshPreferences } = usePreferences()
   const insets = useSafeAreaInsets()
+  const { colors } = useTheme()
 
   const handleUpdatePreferences = () => {
     Alert.alert(
@@ -152,45 +153,45 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
       </View>
 
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.scrollContainer, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
-        <View style={styles.profileHeader}>
+        <View style={[styles.profileHeader, { backgroundColor: colors.background }]}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
+            <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
               <Text style={styles.avatarText}>
                 {user?.email?.charAt(0).toUpperCase() || 'U'}
               </Text>
             </View>
           </View>
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>
+            <Text style={[styles.userName, { color: colors.text }]}>
               {user?.email?.split('@')[0] || 'User'}
             </Text>
-            <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
+            <Text style={[styles.userEmail, { color: colors.text }]}>{user?.email || 'user@example.com'}</Text>
           </View>
         </View>
 
         {/* User Preferences Display */}
         {primaryCategory && (
-          <View style={styles.preferencesSection}>
-            <Text style={styles.preferencesSectionTitle}>Your Focus Areas</Text>
-            <View style={styles.preferencesDisplay}>
+          <View style={[styles.preferencesSection, { backgroundColor: colors.background }]}>
+            <Text style={[styles.preferencesSectionTitle, { color: colors.text }]}>Your Focus Areas</Text>
+            <View style={[styles.preferencesDisplay, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.primaryPreference}>
-                <Text style={styles.primaryLabel}>Primary Focus</Text>
-                <Text style={styles.primaryCategory}>{primaryCategory}</Text>
+                <Text style={[styles.primaryLabel, { color: colors.text }]}>Primary Focus</Text>
+                <Text style={[styles.primaryCategory, { color: colors.primary }]}>{primaryCategory}</Text>
               </View>
               {secondaryCategories.length > 0 && (
-                <View style={styles.secondaryPreferences}>
-                  <Text style={styles.secondaryLabel}>Secondary Focus</Text>
-                  <Text style={styles.secondaryCategories}>
+                <View style={[styles.secondaryPreferences, { borderTopColor: colors.border }]}>
+                  <Text style={[styles.secondaryLabel, { color: colors.text }]}>Secondary Focus</Text>
+                  <Text style={[styles.secondaryCategories, { color: colors.text }]}>
                     {secondaryCategories.join(', ')}
                   </Text>
                 </View>
@@ -204,14 +205,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           {menuItems.map((item, index) => (
             <TouchableOpacity
               key={index}
-              style={styles.menuItem}
+              style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={item.onPress}
             >
               <View style={styles.menuItemLeft}>
                 {renderMenuIcon(item.iconType)}
-                <Text style={styles.menuTitle}>{item.title}</Text>
+                <Text style={[styles.menuTitle, { color: colors.text }]}>{item.title}</Text>
               </View>
-              <Text style={styles.menuArrow}>›</Text>
+              <Text style={[styles.menuArrow, { color: colors.text }]}>›</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -225,31 +226,31 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
         {/* Version Info */}
         <View style={styles.versionSection}>
-          <Text style={styles.versionText}>Version 1.0.0</Text>
+          <Text style={[styles.versionText, { color: colors.text }]}>Version 1.0.0</Text>
         </View>
       </ScrollView>
 
       {/* Bottom Navigation */}
-      <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
+      <View style={[styles.bottomNav, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(8, insets.bottom) }]}>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
-          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
-          <Text style={styles.navLabel}>Home</Text>
+          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
-          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
-          <Text style={styles.navLabel}>Categories</Text>
+          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Categories</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
-          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
-          <Text style={styles.navLabel}>Goals</Text>
+          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Goals</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
-          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
-          <Text style={styles.navLabel}>Schedule</Text>
+          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Schedule</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor="#7C3AED" />
-          <Text style={styles.navLabelActive}>Profile</Text>
+          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor={colors.primary} />
+          <Text style={[styles.navLabelActive, { color: colors.primary }]}>Profile</Text>
         </TouchableOpacity>
       </View>
     </View>

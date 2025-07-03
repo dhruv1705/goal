@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useFocusEffect } from '@react-navigation/native'
+import { useFocusEffect, useTheme } from '@react-navigation/native'
 import {
   View,
   Text,
@@ -40,6 +40,7 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
   const [categoryFilter, setCategoryFilter] = useState<string | null>(route?.params?.categoryFilter || null)
   const { user } = useAuth()
   const insets = useSafeAreaInsets()
+  const { colors } = useTheme()
 
   useEffect(() => {
     fetchGoals()
@@ -206,18 +207,21 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
 
   const renderGoalItem = ({ item }: { item: Goal }) => (
     <TouchableOpacity
-      style={styles.goalItem}
+      style={[styles.goalItem, { backgroundColor: colors.card, borderColor: colors.border }]}
       onPress={() => navigation.navigate('GoalDetail', { goal: item })}
     >
       <View style={styles.goalHeader}>
         <View style={styles.goalTitleContainer}>
-          <View style={styles.goalIconContainer}>
+          <View style={[styles.goalIconContainer, { backgroundColor: colors.card }]}>
             {getCategoryIcon(item.category)}
           </View>
-          <View style={styles.goalTitleText}>
-            <Text style={styles.goalTitle}>{item.title}</Text>
-            {item.category && (
-              <Text style={styles.goalCategory}>{item.category}</Text>
+          <View style={styles.goalTextContainer}>
+            <Text style={[styles.goalTitle, { color: colors.text }]}>{item.title}</Text>
+            <Text style={[styles.goalCategory, { color: colors.primary }]}>{item.category || 'General'}</Text>
+            {item.target_date && (
+              <Text style={[styles.goalTargetDate, { color: colors.text }]}>
+                Target: {new Date(item.target_date).toLocaleDateString()}
+              </Text>
             )}
           </View>
         </View>
@@ -256,12 +260,12 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyEmoji}>🎯</Text>
-      <Text style={styles.emptyTitle}>No Goals Yet</Text>
-      <Text style={styles.emptySubtext}>
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>No Goals Yet</Text>
+      <Text style={[styles.emptySubtext, { color: colors.text }]}>
         Start by creating your first goal to organize your tasks and activities
       </Text>
       <TouchableOpacity
-        style={styles.createFirstGoalButton}
+        style={[styles.createFirstGoalButton, { backgroundColor: colors.primary }]}
         onPress={() => navigation.navigate('AddEditGoal')}
       >
         <Text style={styles.createFirstGoalText}>Create Your First Goal</Text>
@@ -270,24 +274,32 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
   )
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Goals</Text>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Goals</Text>
       </View>
 
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.scrollContainer, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
         {/* Filter Tabs */}
         <View style={styles.filterContainer}>
           {(['active', 'all', 'completed'] as const).map((filter) => (
             <TouchableOpacity
               key={filter}
-              style={[styles.filterTab, activeFilter === filter && styles.filterTabActive]}
+              style={[
+                styles.filterTab, 
+                { backgroundColor: colors.card, borderColor: colors.border },
+                activeFilter === filter && { backgroundColor: colors.primary }
+              ]}
               onPress={() => setActiveFilter(filter)}
             >
-              <Text style={[styles.filterText, activeFilter === filter && styles.filterTextActive]}>
+              <Text style={[
+                styles.filterText, 
+                { color: colors.text },
+                activeFilter === filter && { color: '#fff' }
+              ]}>
                 {filter.charAt(0).toUpperCase() + filter.slice(1)}
               </Text>
             </TouchableOpacity>
@@ -295,22 +307,38 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
         </View>
 
         {/* Category Filter */}
-        <View style={styles.categoryFilterContainer}>
+        <View style={[styles.categoryFilterContainer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
           <TouchableOpacity
-            style={[styles.categoryFilterTab, !categoryFilter && styles.categoryFilterTabActive]}
+            style={[
+              styles.categoryFilterTab, 
+              { borderColor: colors.border },
+              !categoryFilter && { backgroundColor: colors.primary, borderColor: colors.primary }
+            ]}
             onPress={() => setCategoryFilter(null)}
           >
-            <Text style={[styles.categoryFilterText, !categoryFilter && styles.categoryFilterTextActive]}>
+            <Text style={[
+              styles.categoryFilterText, 
+              { color: colors.text },
+              !categoryFilter && { color: '#fff' }
+            ]}>
               All Categories
             </Text>
           </TouchableOpacity>
           {(['Physical Health', 'Mental Health', 'Finance', 'Social'] as const).map((category) => (
             <TouchableOpacity
               key={category}
-              style={[styles.categoryFilterTab, categoryFilter === category && styles.categoryFilterTabActive]}
+              style={[
+                styles.categoryFilterTab, 
+                { borderColor: colors.border },
+                categoryFilter === category && { backgroundColor: colors.primary, borderColor: colors.primary }
+              ]}
               onPress={() => setCategoryFilter(category)}
             >
-              <Text style={[styles.categoryFilterText, categoryFilter === category && styles.categoryFilterTextActive]}>
+              <Text style={[
+                styles.categoryFilterText, 
+                { color: colors.text },
+                categoryFilter === category && { color: '#fff' }
+              ]}>
                 {category}
               </Text>
             </TouchableOpacity>
@@ -333,33 +361,33 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
 
       {/* Floating Action Button */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: colors.primary }]}
         onPress={() => navigation.navigate('AddEditGoal')}
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
 
       {/* Bottom Navigation */}
-      <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
+      <View style={[styles.bottomNav, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(8, insets.bottom) }]}>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
-          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
-          <Text style={styles.navLabel}>Home</Text>
+          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
-          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
-          <Text style={styles.navLabel}>Categories</Text>
+          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Categories</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor="#7C3AED" />
-          <Text style={styles.navLabelActive}>Goals</Text>
+          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor={colors.primary} />
+          <Text style={[styles.navLabelActive, { color: colors.primary }]}>Goals</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
-          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
-          <Text style={styles.navLabel}>Schedule</Text>
+          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Schedule</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
-          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
-          <Text style={styles.navLabel}>Profile</Text>
+          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Profile</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -471,7 +499,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  goalTitleText: {
+  goalTextContainer: {
     flex: 1,
   },
   goalTitle: {

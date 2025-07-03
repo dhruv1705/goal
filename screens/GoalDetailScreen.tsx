@@ -11,12 +11,15 @@ import {
   TextInput,
   Modal,
   Platform,
+  Image,
 } from 'react-native'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Tables } from '../types/supabase'
+import IMAGES from '../assets'
+import { useTheme } from '@react-navigation/native'
 
 type Goal = Tables<'goals'>
 type Schedule = Tables<'schedules'>
@@ -55,6 +58,8 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showTimePicker, setShowTimePicker] = useState(false)
   const [showRecurrenceEndDatePicker, setShowRecurrenceEndDatePicker] = useState(false)
+
+  const { colors } = useTheme()
 
   useEffect(() => {
     fetchTasks()
@@ -371,7 +376,11 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
   const renderTaskItem = (task: Schedule) => (
     <TouchableOpacity
       key={task.id}
-      style={[styles.taskItem, task.completed && styles.taskItemCompleted]}
+      style={[
+        styles.taskItem,
+        { borderColor: colors.border },
+        task.completed && styles.taskItemCompleted
+      ]}
       onPress={() => viewTaskDetails(task)}
     >
       <View style={styles.taskHeader}>
@@ -391,12 +400,13 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
           <View style={styles.taskContent}>
             <Text style={[
               styles.taskTitle,
+              { color: colors.text },
               task.completed && styles.taskTitleCompleted
             ]}>
               {task.title}
             </Text>
             <View style={styles.taskMeta}>
-              <Text style={styles.taskDate}>
+              <Text style={[styles.taskDate, { color: colors.text }]}>
                 {formatDate(task.schedule_date)} at {formatTime(task.schedule_time)}
               </Text>
               <View style={[
@@ -411,6 +421,7 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
             {task.description && (
               <Text style={[
                 styles.taskDescription,
+                { color: colors.text },
                 task.completed && styles.taskDescriptionCompleted
               ]}>
                 {task.description}
@@ -428,37 +439,41 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
     </TouchableOpacity>
   )
 
+  const handleNavigation = (screen: string) => {
+    navigation.navigate(screen)
+  }
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={colors.text === '#ffffff' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>‹</Text>
+          <Text style={[styles.backButtonText, { color: colors.primary }]}>‹</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Goal Details</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Goal Details</Text>
         <TouchableOpacity
           onPress={() => navigation.navigate('AddEditGoal', { goal })}
-          style={styles.editButton}
+          style={[styles.editButton, { backgroundColor: colors.primary }]}
         >
           <Text style={styles.editButtonText}>Edit</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView
-        style={styles.scrollContainer}
+        style={[styles.scrollContainer, { backgroundColor: colors.background }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {/* Goal Header */}
-        <View style={styles.goalHeader}>
+        <View style={[styles.goalHeader, { borderBottomColor: colors.border }]}>
           <View style={styles.goalTitleContainer}>
             <Text style={styles.goalEmoji}>{getCategoryIcon(goal.category)}</Text>
             <View style={styles.goalTitleText}>
-              <Text style={styles.goalTitle}>{goal.title}</Text>
+              <Text style={[styles.goalTitle, { color: colors.text }]}>{goal.title}</Text>
               {goal.category && (
-                <Text style={styles.goalCategory}>{goal.category}</Text>
+                <Text style={[styles.goalCategory, { color: colors.primary }]}>{goal.category}</Text>
               )}
             </View>
             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(goal.status) }]}>
@@ -467,11 +482,11 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
           </View>
           
           {goal.description && (
-            <Text style={styles.goalDescription}>{goal.description}</Text>
+            <Text style={[styles.goalDescription, { color: colors.text }]}>{goal.description}</Text>
           )}
           
           {goal.target_date && (
-            <Text style={styles.targetDate}>
+            <Text style={[styles.targetDate, { color: '#F59E0B' }]}>
               Target: {new Date(goal.target_date).toLocaleDateString('en-US', {
                 month: 'long',
                 day: 'numeric',
@@ -482,57 +497,58 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
         </View>
 
         {/* Progress Section */}
-        <View style={styles.progressSection}>
+        <View style={[styles.progressSection, { borderBottomColor: colors.border }]}>
           <View style={styles.progressHeader}>
-            <Text style={styles.progressTitle}>Progress</Text>
-            <Text style={styles.progressStats}>
+            <Text style={[styles.progressTitle, { color: colors.text }]}>Progress</Text>
+            <Text style={[styles.progressStats, { color: colors.text }]}>
               {completedTasks} of {totalTasks} tasks completed
             </Text>
           </View>
           <View style={styles.progressVisualContainer}>
             {/* Circular Progress Ring */}
             <View style={styles.progressRingContainer}>
-              <View style={styles.progressRingBackground} />
+              <View style={[styles.progressRingBackground, { borderColor: colors.border }]} />
               <View style={[
                 styles.progressRingFill,
                 {
+                  borderColor: colors.primary,
                   transform: [
                     { rotate: `${-90 + (progressPercentage * 3.6)}deg` }
                   ]
                 }
               ]} />
               <View style={styles.progressRingCenter}>
-                <Text style={styles.progressPercentageText}>
+                <Text style={[styles.progressPercentageText, { color: colors.primary }]}>
                   {Math.round(progressPercentage)}%
                 </Text>
-                <Text style={styles.progressCompleteText}>Complete</Text>
+                <Text style={[styles.progressCompleteText, { color: colors.text }]}>Complete</Text>
               </View>
             </View>
             
             {/* Progress Stats */}
             <View style={styles.progressStatsContainer}>
               <View style={styles.progressStatItem}>
-                <Text style={styles.progressStatNumber}>{totalTasks}</Text>
-                <Text style={styles.progressStatLabel}>Total Tasks</Text>
+                <Text style={[styles.progressStatNumber, { color: colors.text }]}>{totalTasks}</Text>
+                <Text style={[styles.progressStatLabel, { color: colors.text }]}>Total Tasks</Text>
               </View>
               <View style={styles.progressStatItem}>
                 <Text style={[styles.progressStatNumber, { color: '#10B981' }]}>{completedTasks}</Text>
-                <Text style={styles.progressStatLabel}>Completed</Text>
+                <Text style={[styles.progressStatLabel, { color: colors.text }]}>Completed</Text>
               </View>
               <View style={styles.progressStatItem}>
                 <Text style={[styles.progressStatNumber, { color: '#F59E0B' }]}>{totalTasks - completedTasks}</Text>
-                <Text style={styles.progressStatLabel}>Remaining</Text>
+                <Text style={[styles.progressStatLabel, { color: colors.text }]}>Remaining</Text>
               </View>
             </View>
           </View>
         </View>
 
         {/* Tasks Section */}
-        <View style={styles.tasksSection}>
+        <View style={[styles.tasksSection, { backgroundColor: colors.background }]}>
           <View style={styles.tasksHeader}>
-            <Text style={styles.tasksTitle}>Tasks</Text>
+            <Text style={[styles.tasksTitle, { color: colors.text }]}>Tasks</Text>
             <TouchableOpacity
-              style={styles.addTaskButton}
+              style={[styles.addTaskButton, { backgroundColor: colors.primary }]}
               onPress={() => setShowAddTaskModal(true)}
             >
               <Text style={styles.addTaskButtonText}>+ Add Task</Text>
@@ -546,10 +562,8 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
           ) : (
             <View style={styles.emptyTasks}>
               <Text style={styles.emptyTasksEmoji}>📝</Text>
-              <Text style={styles.emptyTasksTitle}>No Tasks Yet</Text>
-              <Text style={styles.emptyTasksSubtext}>
-                Add tasks to break down your goal into actionable steps
-              </Text>
+              <Text style={[styles.emptyTasksTitle, { color: colors.text }]}>No Tasks Yet</Text>
+              <Text style={[styles.emptyTasksSubtext, { color: colors.text }]}>Add tasks to break down your goal into actionable steps</Text>
             </View>
           )}
         </View>
@@ -561,18 +575,18 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <TouchableOpacity
               onPress={() => setShowAddTaskModal(false)}
               style={styles.modalCloseButton}
             >
-              <Text style={styles.modalCloseText}>Cancel</Text>
+              <Text style={[styles.modalCloseText, { color: '#EF4444' }]}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Add Task</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Add Task</Text>
             <TouchableOpacity
               onPress={handleAddTask}
-              style={[styles.modalSaveButton, savingTask && styles.modalSaveButtonDisabled]}
+              style={[styles.modalSaveButton, { backgroundColor: colors.primary }, savingTask && styles.modalSaveButtonDisabled]}
               disabled={savingTask}
             >
               <Text style={styles.modalSaveText}>
@@ -581,27 +595,27 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+          <ScrollView style={[styles.modalContent, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>Task Title *</Text>
+              <Text style={[styles.modalLabel, { color: colors.text }]}>Task Title *</Text>
               <TextInput
-                style={styles.modalInput}
+                style={[styles.modalInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
                 value={newTaskTitle}
                 onChangeText={setNewTaskTitle}
                 placeholder="What needs to be done?"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.text + '80'}
                 maxLength={100}
               />
             </View>
 
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>Description</Text>
+              <Text style={[styles.modalLabel, { color: colors.text }]}>Description</Text>
               <TextInput
-                style={[styles.modalInput, styles.modalTextArea]}
+                style={[styles.modalInput, styles.modalTextArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
                 value={newTaskDescription}
                 onChangeText={setNewTaskDescription}
                 placeholder="Add more details..."
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.text + '80'}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
@@ -610,12 +624,12 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
             </View>
 
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>Date *</Text>
+              <Text style={[styles.modalLabel, { color: colors.text }]}>Date *</Text>
               <TouchableOpacity
-                style={styles.dateTimeButton}
+                style={[styles.dateTimeButton, { backgroundColor: colors.card, borderColor: colors.border }]}
                 onPress={() => setShowDatePicker(true)}
               >
-                <Text style={styles.dateTimeButtonText}>
+                <Text style={[styles.dateTimeButtonText, { color: colors.text }]}>
                   {formatDateDisplay(newTaskDate)}
                 </Text>
                 <Text style={styles.dateTimeButtonIcon}>📅</Text>
@@ -623,12 +637,12 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
             </View>
 
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>Time *</Text>
+              <Text style={[styles.modalLabel, { color: colors.text }]}>Time *</Text>
               <TouchableOpacity
-                style={styles.dateTimeButton}
+                style={[styles.dateTimeButton, { backgroundColor: colors.card, borderColor: colors.border }]}
                 onPress={() => setShowTimePicker(true)}
               >
-                <Text style={styles.dateTimeButtonText}>
+                <Text style={[styles.dateTimeButtonText, { color: colors.text }]}>
                   {formatTimeDisplay(newTaskTime)}
                 </Text>
                 <Text style={styles.dateTimeButtonIcon}>🕐</Text>
@@ -676,33 +690,24 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
                 {isRecurring && (
                   <View style={styles.recurringOptions}>
                     <Text style={styles.recurringLabel}>Repeat every:</Text>
-                    <View style={styles.recurringControls}>
-                      <TextInput
-                        style={styles.intervalInput}
-                        value={recurrenceInterval.toString()}
-                        onChangeText={(text) => setRecurrenceInterval(Math.max(1, parseInt(text) || 1))}
-                        keyboardType="numeric"
-                        maxLength={2}
-                      />
-                      <View style={styles.recurrenceTypeGrid}>
-                        {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((type) => (
-                          <TouchableOpacity
-                            key={type}
-                            style={[
-                              styles.recurrenceTypeItem,
-                              recurrenceType === type && styles.recurrenceTypeItemActive
-                            ]}
-                            onPress={() => setRecurrenceType(type)}
-                          >
-                            <Text style={[
-                              styles.recurrenceTypeText,
-                              recurrenceType === type && styles.recurrenceTypeTextActive
-                            ]}>
-                              {type}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
+                    <View style={styles.recurrenceTypeGrid}>
+                      {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((type) => (
+                        <TouchableOpacity
+                          key={type}
+                          style={[
+                            styles.recurrenceTypeItem,
+                            recurrenceType === type && styles.recurrenceTypeItemActive
+                          ]}
+                          onPress={() => setRecurrenceType(type)}
+                        >
+                          <Text style={[
+                            styles.recurrenceTypeText,
+                            recurrenceType === type && styles.recurrenceTypeTextActive
+                          ]}>
+                            {type}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
                     </View>
                   </View>
                 )}
@@ -710,7 +715,7 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
             )}
 
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>Priority</Text>
+              <Text style={[styles.modalLabel, { color: colors.text }]}>Priority</Text>
               <View style={styles.priorityGrid}>
                 {(['high', 'medium', 'low'] as const).map((priority) => (
                   <TouchableOpacity
@@ -742,15 +747,15 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}> 
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}> 
             <TouchableOpacity
               onPress={() => setShowTaskDetailModal(false)}
               style={styles.modalCloseButton}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={[styles.modalCloseText, { color: '#EF4444' }]}>Close</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Task Details</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Task Details</Text>
             <TouchableOpacity
               onPress={() => {
                 if (selectedTask) {
@@ -758,7 +763,7 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
                   setShowTaskDetailModal(false)
                 }
               }}
-              style={styles.modalActionButton}
+              style={[styles.modalActionButton, { backgroundColor: colors.primary }]}
             >
               <Text style={styles.modalActionText}>
                 {selectedTask?.completed ? 'Mark Incomplete' : 'Mark Complete'}
@@ -767,19 +772,19 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
           </View>
           
           {selectedTask && (
-            <ScrollView style={styles.modalScrollView}>
+            <ScrollView style={[styles.modalScrollView, { backgroundColor: colors.background }]}> 
               <View style={styles.taskDetailContainer}>
-                <Text style={styles.taskDetailTitle}>{selectedTask.title}</Text>
+                <Text style={[styles.taskDetailTitle, { color: colors.text }]}>{selectedTask.title}</Text>
                 
                 <View style={styles.taskDetailMeta}>
-                  <Text style={styles.taskDetailLabel}>Date & Time:</Text>
-                  <Text style={styles.taskDetailValue}>
+                  <Text style={[styles.taskDetailLabel, { color: colors.text, opacity: 0.7 }]}>Date & Time:</Text>
+                  <Text style={[styles.taskDetailValue, { color: colors.text }]}>
                     {formatDate(selectedTask.schedule_date)} at {formatTime(selectedTask.schedule_time)}
                   </Text>
                 </View>
                 
                 <View style={styles.taskDetailMeta}>
-                  <Text style={styles.taskDetailLabel}>Priority:</Text>
+                  <Text style={[styles.taskDetailLabel, { color: colors.text, opacity: 0.7 }]}>Priority:</Text>
                   <View style={[
                     styles.priorityBadge,
                     { backgroundColor: getPriorityColor(selectedTask.priority) }
@@ -792,15 +797,15 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
                 
                 {selectedTask.description && (
                   <View style={styles.taskDetailMeta}>
-                    <Text style={styles.taskDetailLabel}>Description:</Text>
-                    <Text style={styles.taskDetailDescription}>
+                    <Text style={[styles.taskDetailLabel, { color: colors.text, opacity: 0.7 }]}>Description:</Text>
+                    <Text style={[styles.taskDetailDescription, { color: colors.text }]}>
                       {selectedTask.description}
                     </Text>
                   </View>
                 )}
                 
                 <View style={styles.taskDetailMeta}>
-                  <Text style={styles.taskDetailLabel}>Status:</Text>
+                  <Text style={[styles.taskDetailLabel, { color: colors.text, opacity: 0.7 }]}>Status:</Text>
                   <Text style={[
                     styles.taskDetailValue,
                     { color: selectedTask.completed ? '#10B981' : '#F59E0B' }
@@ -835,62 +840,25 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
       )}
 
       {/* Bottom Navigation */}
-      <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.homeIcon}>
-              <View style={styles.homeIconRoof} />
-              <View style={styles.homeIconBody} />
-            </View>
-          </View>
+      <View style={[styles.bottomNav, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(8, insets.bottom) }]}>
+        <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Home')}>
+          <Image source={IMAGES.HOME} style={styles.navIcon} tintColor={"#808080"} />
           <Text style={styles.navLabel}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.navItem, styles.navItemActive]} onPress={() => navigation.navigate('Goals')}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.goalsIconActive}>
-              <View style={styles.goalsFlagPoleActive} />
-              <View style={styles.goalsFlagBodyActive} />
-            </View>
-          </View>
-          <Text style={styles.navLabelActive}>Goals</Text>
+        <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Categories')}>
+          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} tintColor={"#808080"} />
+          <Text style={styles.navLabel}>Categories</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.scheduleIcon}>
-              <View style={styles.scheduleCalendarBody} />
-              <View style={styles.scheduleCalendarTop} />
-              <View style={styles.scheduleGridContainer}>
-                <View style={styles.scheduleGridRow}>
-                  <View style={styles.scheduleGridDot} />
-                  <View style={styles.scheduleGridDot} />
-                  <View style={styles.scheduleGridDot} />
-                </View>
-                <View style={styles.scheduleGridRow}>
-                  <View style={styles.scheduleGridDot} />
-                  <View style={styles.scheduleGridDot} />
-                  <View style={styles.scheduleGridDot} />
-                </View>
-              </View>
-            </View>
-          </View>
+        <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Goals')}>
+          <Image source={IMAGES.GOALS} style={styles.navIcon} tintColor={"#808080"} />
+          <Text style={styles.navLabel}>Goals</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Schedule')}>
+          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} tintColor={"#808080"} />
           <Text style={styles.navLabel}>Schedule</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Feedback')}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.feedbackIcon}>
-              <View style={styles.feedbackBubble} />
-              <View style={styles.feedbackTail} />
-            </View>
-          </View>
-          <Text style={styles.navLabel}>Feedback</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
-          <View style={styles.navIconContainer}>
-            <View style={styles.profileIcon}>
-              <View style={styles.profileHead} />
-              <View style={styles.profileBody} />
-            </View>
-          </View>
+        <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Profile')}>
+          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} tintColor={"#808080"} />
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
       </View>
@@ -899,6 +867,11 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
 }
 
 const styles = StyleSheet.create({
+  navIcon: {
+    width: 24,
+    height: 24,
+    resizeMode: 'contain',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -1116,7 +1089,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   taskItem: {
-    backgroundColor: 'white',
     borderRadius: 16,
     padding: 20,
     marginBottom: 12,
@@ -1631,5 +1603,60 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1a1a1a',
     lineHeight: 24,
+  },
+   recurringToggle: {
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  recurringToggleActive: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#7C3AED',
+  },
+  recurringToggleText: {
+    color: '#374151',
+    fontWeight: '600',
+  },
+  recurringToggleTextActive: {
+    color: '#7C3AED',
+  },
+  recurringOptions: {
+    marginTop: 12,
+  },
+  recurringLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  recurrenceTypeGrid: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  recurrenceTypeItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginRight: 8,
+    backgroundColor: '#F9FAFB',
+  },
+  recurrenceTypeItemActive: {
+    backgroundColor: '#7C3AED',
+    borderColor: '#7C3AED',
+  },
+  recurrenceTypeText: {
+    color: '#374151',
+    fontWeight: '600',
+  },
+  recurrenceTypeTextActive: {
+    color: 'white',
+  },
+  modalScrollView: {
+    flex: 1,
   },
 })

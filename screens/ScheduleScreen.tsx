@@ -13,6 +13,7 @@ import {
   Image
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useTheme } from '@react-navigation/native'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Tables } from '../types/supabase'
@@ -43,6 +44,7 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
   const [showActionSheet, setShowActionSheet] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Schedule | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string | null>(route?.params?.categoryFilter || null)
+  const { colors } = useTheme()
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -435,21 +437,37 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
 
   const renderScheduleItem = ({ item }: { item: Schedule }) => (
     <TouchableOpacity
-      style={[styles.taskItem, item.completed && styles.taskItemCompleted]}
+      style={[
+        styles.taskItem, 
+        { backgroundColor: colors.card, borderColor: colors.border },
+        item.completed && styles.taskItemCompleted
+      ]}
       onPress={() => showTaskActions(item)}
     >
       <View style={styles.taskContent}>
         <View style={styles.timeSection}>
-          <Text style={[styles.taskTime, item.completed && styles.taskTimeCompleted]}>
+          <Text style={[
+            styles.taskTime, 
+            { color: colors.text },
+            item.completed && styles.taskTimeCompleted
+          ]}>
             {formatTime(item.schedule_time)}
           </Text>
         </View>
         <View style={styles.taskAccent} />
         <View style={styles.taskDetails}>
-          <Text style={[styles.taskTitle, item.completed && styles.taskTitleCompleted]}>
+          <Text style={[
+            styles.taskTitle, 
+            { color: colors.text },
+            item.completed && styles.taskTitleCompleted
+          ]}>
             {item.title}
           </Text>
-          <Text style={[styles.taskCategory, item.completed && styles.taskCategoryCompleted]}>
+          <Text style={[
+            styles.taskCategory, 
+            { color: colors.text },
+            item.completed && styles.taskCategoryCompleted
+          ]}>
             {(item as any).goalCategory || 'General'}
           </Text>
         </View>
@@ -458,24 +476,32 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
   )
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Schedule</Text>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Schedule</Text>
       </View>
 
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.scrollContainer, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
         {/* Tab Navigation */}
         <View style={styles.tabNavigation}>
           {(['Day', 'Week', 'Month'] as const).map((tab) => (
             <TouchableOpacity
               key={tab}
-              style={[styles.tabButton, activeTab === tab && styles.tabButtonActive]}
+              style={[
+                styles.tabButton, 
+                { backgroundColor: colors.card, borderColor: colors.border },
+                activeTab === tab && { backgroundColor: colors.primary }
+              ]}
               onPress={() => setActiveTab(tab)}
             >
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+              <Text style={[
+                styles.tabText, 
+                { color: colors.text },
+                activeTab === tab && { color: '#fff' }
+              ]}>
                 {tab}
               </Text>
             </TouchableOpacity>
@@ -483,22 +509,38 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
         </View>
 
         {/* Category Filter */}
-        <View style={styles.categoryFilterContainer}>
+        <View style={[styles.categoryFilterContainer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
           <TouchableOpacity
-            style={[styles.categoryFilterTab, !categoryFilter && styles.categoryFilterTabActive]}
+            style={[
+              styles.categoryFilterTab, 
+              { borderColor: colors.border },
+              !categoryFilter && { backgroundColor: colors.primary, borderColor: colors.primary }
+            ]}
             onPress={() => setCategoryFilter(null)}
           >
-            <Text style={[styles.categoryFilterText, !categoryFilter && styles.categoryFilterTextActive]}>
+            <Text style={[
+              styles.categoryFilterText, 
+              { color: colors.text },
+              !categoryFilter && { color: '#fff' }
+            ]}>
               All Categories
             </Text>
           </TouchableOpacity>
           {(['Physical Health', 'Mental Health', 'Finance', 'Social'] as const).map((category) => (
             <TouchableOpacity
               key={category}
-              style={[styles.categoryFilterTab, categoryFilter === category && styles.categoryFilterTabActive]}
+              style={[
+                styles.categoryFilterTab, 
+                { borderColor: colors.border },
+                categoryFilter === category && { backgroundColor: colors.primary, borderColor: colors.primary }
+              ]}
               onPress={() => setCategoryFilter(category)}
             >
-              <Text style={[styles.categoryFilterText, categoryFilter === category && styles.categoryFilterTextActive]}>
+              <Text style={[
+                styles.categoryFilterText, 
+                { color: colors.text },
+                categoryFilter === category && { color: '#fff' }
+              ]}>
                 {category}
               </Text>
             </TouchableOpacity>
@@ -509,19 +551,19 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
         {activeTab === 'Day' ? (
           <View style={styles.dateNavigation}>
             <TouchableOpacity onPress={() => navigateDate('prev')} style={styles.navArrow}>
-              <Text style={styles.navArrowText}>‹</Text>
+              <Text style={[styles.navArrowText, { color: colors.text }]}>‹</Text>
             </TouchableOpacity>
             <View style={styles.dateSection}>
-              <Text style={styles.currentDate}>{formatDate(currentDate)}</Text>
+              <Text style={[styles.currentDate, { color: colors.primary }]}>{formatDate(currentDate)}</Text>
               <TouchableOpacity 
-                style={styles.todayButton}
+                style={[styles.todayButton, { backgroundColor: colors.primary }]}
                 onPress={() => setCurrentDate(new Date())}
               >
                 <Text style={styles.todayButtonText}>Today</Text>
               </TouchableOpacity>
             </View>
             <TouchableOpacity onPress={() => navigateDate('next')} style={styles.navArrow}>
-              <Text style={styles.navArrowText}>›</Text>
+              <Text style={[styles.navArrowText, { color: colors.text }]}>›</Text>
             </TouchableOpacity>
           </View>
         ) : activeTab === 'Week' ? (
@@ -529,21 +571,21 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
             {/* Week Navigation */}
             <View style={styles.weekNavigation}>
               <TouchableOpacity onPress={() => navigateDate('prev')} style={styles.navArrow}>
-                <Text style={styles.navArrowText}>‹</Text>
+                <Text style={[styles.navArrowText, { color: colors.text }]}>‹</Text>
               </TouchableOpacity>
               <View style={styles.dateSection}>
-                <Text style={styles.weekRange}>
+                <Text style={[styles.weekRange, { color: colors.text }]}>
                   {formatWeekDate(getWeekStart(currentDate))} - {formatWeekDate(getWeekEnd(currentDate))}
                 </Text>
                 <TouchableOpacity 
-                  style={styles.todayButton}
+                  style={[styles.todayButton, { backgroundColor: colors.primary }]}
                   onPress={() => setCurrentDate(new Date())}
                 >
-                  <Text style={styles.todayButtonText}>Today</Text>
+                  <Text style={[styles.todayButtonText, { color: colors.text }]}>Today</Text>
                 </TouchableOpacity>
               </View>
               <TouchableOpacity onPress={() => navigateDate('next')} style={styles.navArrow}>
-                <Text style={styles.navArrowText}>›</Text>
+                <Text style={[styles.navArrowText, { color: colors.text }]}>›</Text>
               </TouchableOpacity>
             </View>
             
@@ -555,22 +597,25 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
                     key={index}
                     style={[
                       styles.weekDayItem,
-                      isSelectedDay(day) && styles.weekDayItemSelected,
-                      isToday(day) && styles.weekDayItemToday
+                      { backgroundColor: colors.card },
+                      isSelectedDay(day) && { backgroundColor: colors.primary },
+                      isToday(day) && !isSelectedDay(day) && { borderWidth: 2, borderColor: colors.primary }
                     ]}
                     onPress={() => selectWeekDay(day)}
                   >
                     <Text style={[
                       styles.weekDayName,
-                      isToday(day) && !isSelectedDay(day) && styles.weekDayNameToday,
-                      isSelectedDay(day) && styles.weekDayNameSelected
+                      { color: colors.text },
+                      isToday(day) && !isSelectedDay(day) && { color: colors.primary, fontWeight: '600' },
+                      isSelectedDay(day) && { color: 'white' }
                     ]}>
                       {day.toLocaleDateString('en-US', { weekday: 'short' })}
                     </Text>
                     <Text style={[
                       styles.weekDayNumber,
-                      isToday(day) && !isSelectedDay(day) && styles.weekDayNumberToday,
-                      isSelectedDay(day) && styles.weekDayNumberSelected
+                      { color: colors.text },
+                      isToday(day) && !isSelectedDay(day) && { color: colors.primary },
+                      isSelectedDay(day) && { color: 'white' }
                     ]}>
                       {day.getDate()}
                     </Text>
@@ -587,21 +632,21 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
             {/* Month Navigation */}
             <View style={styles.monthNavigation}>
               <TouchableOpacity onPress={() => navigateDate('prev')} style={styles.navArrow}>
-                <Text style={styles.navArrowText}>‹</Text>
+                <Text style={[styles.navArrowText, { color: colors.text }]}>‹</Text>
               </TouchableOpacity>
               <View style={styles.dateSection}>
-                <Text style={styles.monthTitle}>
+                <Text style={[styles.monthTitle, { color: colors.text }]}>
                   {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </Text>
                 <TouchableOpacity 
-                  style={styles.todayButton}
+                  style={[styles.todayButton, { backgroundColor: colors.primary }]}
                   onPress={() => setCurrentDate(new Date())}
                 >
-                  <Text style={styles.todayButtonText}>Today</Text>
+                  <Text style={[styles.todayButtonText, { color: colors.text }]}>Today</Text>
                 </TouchableOpacity>
               </View>
               <TouchableOpacity onPress={() => navigateDate('next')} style={styles.navArrow}>
-                <Text style={styles.navArrowText}>›</Text>
+                <Text style={[styles.navArrowText, { color: colors.text }]}>›</Text>
               </TouchableOpacity>
             </View>
             
@@ -610,7 +655,7 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
               {/* Week Headers */}
               <View style={styles.weekHeaders}>
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                  <Text key={day} style={styles.weekHeader}>{day}</Text>
+                  <Text key={day} style={[styles.weekHeader, { color: colors.text }]}>{day}</Text>
                 ))}
               </View>
               
@@ -622,16 +667,17 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
                     style={[
                       styles.calendarDay,
                       !isCurrentMonth(day) && styles.calendarDayOtherMonth,
-                      isSelectedDay(day) && styles.calendarDaySelected,
-                      isToday(day) && !isSelectedDay(day) && styles.calendarDayToday
+                      isSelectedDay(day) && { backgroundColor: colors.primary, borderRadius: 8 },
+                      isToday(day) && !isSelectedDay(day) && { borderWidth: 2, borderColor: colors.primary, borderRadius: 8 }
                     ]}
                     onPress={() => selectMonthDay(day)}
                   >
                     <Text style={[
                       styles.calendarDayText,
-                      !isCurrentMonth(day) && styles.calendarDayTextOtherMonth,
-                      isToday(day) && !isSelectedDay(day) && styles.calendarDayTextToday,
-                      isSelectedDay(day) && styles.calendarDayTextSelected
+                      { color: colors.text },
+                      !isCurrentMonth(day) && { color: colors.text + '50' },
+                      isToday(day) && !isSelectedDay(day) && { color: colors.primary, fontWeight: '700' },
+                      isSelectedDay(day) && { color: 'white', fontWeight: '700' }
                     ]}>
                       {day.getDate()}
                     </Text>
@@ -645,7 +691,7 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
             
             {/* Selected Day Info */}
             <View style={styles.selectedDayInfo}>
-              <Text style={styles.selectedDayTitle}>
+              <Text style={[styles.selectedDayTitle, { color: colors.text }]}>
                 {selectedMonthDay.toLocaleDateString('en-US', { 
                   weekday: 'long',
                   month: 'long', 
@@ -659,15 +705,15 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
 
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{totalTasks}</Text>
-            <Text style={styles.statLabel}>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.statNumber, { color: colors.primary }]}>{totalTasks}</Text>
+            <Text style={[styles.statLabel, { color: colors.text }]}>
               {activeTab === 'Week' ? 'Weekly Tasks' : activeTab === 'Month' ? 'Monthly Tasks' : 'Total Tasks'}
             </Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{completedTasks}</Text>
-            <Text style={styles.statLabel}>Completed</Text>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.statNumber, { color: colors.primary }]}>{completedTasks}</Text>
+            <Text style={[styles.statLabel, { color: colors.text }]}>Completed</Text>
           </View>
         </View>
 
@@ -681,8 +727,8 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
             ))
           ) : (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No schedules for today</Text>
-              <Text style={styles.emptySubtext}>
+              <Text style={[styles.emptyText, { color: colors.text }]}>No schedules for today</Text>
+              <Text style={[styles.emptySubtext, { color: colors.text }]}>
                 Tap the + button to add your first schedule
               </Text>
             </View>
@@ -692,7 +738,7 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
 
       {/* Floating Action Button */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: colors.primary }]}
         onPress={() => navigation.navigate('AddEdit')}
       >
         <Text style={styles.fabText}>+</Text>
@@ -710,36 +756,36 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
           activeOpacity={1}
           onPress={() => setShowActionSheet(false)}
         >
-          <View style={styles.actionSheet}>
-            <View style={styles.actionSheetHeader}>
-              <Text style={styles.actionSheetTitle}>
+          <View style={[styles.actionSheet, { backgroundColor: colors.card }]}>
+            <View style={[styles.actionSheetHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.actionSheetTitle, { color: colors.text }]}>
                 {selectedTask?.title}
               </Text>
-              <Text style={styles.actionSheetSubtitle}>
+              <Text style={[styles.actionSheetSubtitle, { color: colors.text + '80' }]}>
                 {selectedTask && formatTime(selectedTask.schedule_time)}
               </Text>
             </View>
             
             <TouchableOpacity 
-              style={styles.actionSheetOption}
+              style={[styles.actionSheetOption, { borderBottomColor: colors.border }]}
               onPress={handleMarkComplete}
             >
-              <Text style={styles.actionSheetOptionText}>
+              <Text style={[styles.actionSheetOptionText, { color: colors.text }]}>
                 {selectedTask?.completed ? 'Mark Incomplete' : 'Mark Complete'}
               </Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={styles.actionSheetOption}
+              style={[styles.actionSheetOption, { borderBottomColor: colors.border }]}
               onPress={handleViewEdit}
             >
-              <Text style={styles.actionSheetOptionText}>
+              <Text style={[styles.actionSheetOptionText, { color: colors.text }]}>
                 View/Edit Details
               </Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={[styles.actionSheetOption, styles.actionSheetCancel]}
+              style={[styles.actionSheetOption, styles.actionSheetCancel, { borderTopColor: colors.border }]}
               onPress={() => setShowActionSheet(false)}
             >
               <Text style={[styles.actionSheetOptionText, styles.actionSheetCancelText]}>
@@ -750,27 +796,27 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
         </TouchableOpacity>
       </Modal>
 
-      {/* Bottom Navigation - LifeTracker Style */}
-      <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
+      {/* Bottom Navigation */}
+      <View style={[styles.bottomNav, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(8, insets.bottom) }]}>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
-          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
-          <Text style={styles.navLabel}>Home</Text>
+          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
+          <Text style={[styles.navLabel, { color: colors.text }]}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
-          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
-          <Text style={styles.navLabel}>Categories</Text>
+          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
+          <Text style={[styles.navLabel, { color: colors.text }]}>Categories</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
-          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
-          <Text style={styles.navLabel}>Goals</Text>
+          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
+          <Text style={[styles.navLabel, { color: colors.text }]}>Goals</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={'#7C3AED'}/>
-          <Text style={styles.navLabelActive}>Schedule</Text>
+          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={colors.primary}/>
+          <Text style={[styles.navLabelActive, { color: colors.primary }]}>Schedule</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
-          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor={'#808080'}/>
-          <Text style={styles.navLabel}>Profile</Text>
+          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
+          <Text style={[styles.navLabel, { color: colors.text }]}>Profile</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -905,7 +951,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    backgroundColor: '#f8f9fa',
     borderRadius: 12,
     padding: 16,
   },
@@ -917,7 +962,6 @@ const styles = StyleSheet.create({
   taskTime: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
   },
   taskAccent: {
     width: 4,
@@ -932,12 +976,10 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
     marginBottom: 4,
   },
   taskCategory: {
     fontSize: 14,
-    color: '#666',
   },
   
   // Completed task styles
@@ -1213,40 +1255,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginHorizontal: 4,
     borderRadius: 12,
-    backgroundColor: '#f8f9fa',
     minWidth: 60,
     position: 'relative',
-  },
-  weekDayItemSelected: {
-    backgroundColor: '#7C3AED',
-  },
-  weekDayItemToday: {
-    borderWidth: 2,
-    borderColor: '#7C3AED',
   },
   weekDayName: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#666',
     marginBottom: 4,
-  },
-  weekDayNameSelected: {
-    color: 'white',
-  },
-  weekDayNameToday: {
-    color: '#7C3AED',
-    fontWeight: '600',
   },
   weekDayNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#333',
-  },
-  weekDayNumberSelected: {
-    color: 'white',
-  },
-  weekDayNumberToday: {
-    color: '#7C3AED',
   },
   taskIndicator: {
     position: 'absolute',
@@ -1278,7 +1297,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   actionSheet: {
-    backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 40,
@@ -1286,34 +1304,28 @@ const styles = StyleSheet.create({
   actionSheetHeader: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   actionSheetTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a1a',
     marginBottom: 4,
   },
   actionSheetSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
   },
   actionSheetOption: {
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   actionSheetOptionText: {
     fontSize: 16,
-    color: '#1a1a1a',
     textAlign: 'center',
   },
   actionSheetCancel: {
     borderBottomWidth: 0,
     marginTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
   },
   actionSheetCancelText: {
     color: '#EF4444',
@@ -1365,30 +1377,9 @@ const styles = StyleSheet.create({
   calendarDayOtherMonth: {
     opacity: 0.3,
   },
-  calendarDaySelected: {
-    backgroundColor: '#7C3AED',
-    borderRadius: 8,
-  },
-  calendarDayToday: {
-    borderWidth: 2,
-    borderColor: '#7C3AED',
-    borderRadius: 8,
-  },
   calendarDayText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#1a1a1a',
-  },
-  calendarDayTextOtherMonth: {
-    color: '#9CA3AF',
-  },
-  calendarDayTextToday: {
-    color: '#7C3AED',
-    fontWeight: '700',
-  },
-  calendarDayTextSelected: {
-    color: 'white',
-    fontWeight: '700',
   },
   calendarTaskIndicator: {
     position: 'absolute',

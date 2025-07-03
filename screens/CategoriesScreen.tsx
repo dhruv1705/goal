@@ -8,10 +8,11 @@ import {
   StatusBar,
   Dimensions,
   Image,
+  SafeAreaView,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useTheme } from '@react-navigation/native'
 import { useAuth } from '../contexts/AuthContext'
-import { usePreferences } from '../contexts/PreferencesContext'
 import { supabase } from '../lib/supabase'
 import IMAGES from '../assets'
 
@@ -41,8 +42,8 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ navigation }
   const [categoryData, setCategoryData] = useState<CategoryData[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
-  const { getOrderedCategories, primaryCategory, secondaryCategories } = usePreferences()
   const insets = useSafeAreaInsets()
+  const { colors } = useTheme()
 
   useEffect(() => {
     fetchCategoryData()
@@ -181,42 +182,19 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ navigation }
     navigation.navigate('Schedule', { categoryFilter: category })
   }
 
-  const getOrderedCategoryData = () => {
-    const orderedCategories = getOrderedCategories()
-    return categoryData.sort((a, b) => {
-      const aOrder = orderedCategories.findIndex(cat => cat.category === a.name)
-      const bOrder = orderedCategories.findIndex(cat => cat.category === b.name)
-      return aOrder - bOrder
-    })
-  }
-
-  const getCategoryPriority = (categoryName: string) => {
-    const orderedCategories = getOrderedCategories()
-    const categoryInfo = orderedCategories.find(cat => cat.category === categoryName)
-    return categoryInfo
-  }
-
-  const renderCategoryCard = (category: CategoryData, index: number, isFocusArea: boolean = false) => {
+  const renderCategoryCard = (category: CategoryData, index: number) => {
     const categoryInfo = categories.find(cat => cat.name === category.name)
-    const categoryPriority = getCategoryPriority(category.name)
     const completionRate = category.totalGoals > 0 
       ? Math.round((category.completedGoals / category.totalGoals) * 100) 
       : 0
 
     return (
-      <View 
-        key={`${category.name}-${isFocusArea ? 'focus' : 'all'}`} 
-        style={[
-          styles.categoryCard,
-          categoryPriority?.is_primary && styles.categoryCardPrimary,
-          isFocusArea && styles.categoryCardFocus
-        ]}
-      >
+      <View key={category.name} style={[styles.categoryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.categoryHeader}>
           <CategoryIcon categoryName={category.name} />
           <View style={styles.categoryTitleContainer}>
-            <Text style={styles.categoryTitle}>{category.name}</Text>
-            <Text style={styles.completionRate}>{completionRate}% Complete</Text>
+            <Text style={[styles.categoryTitle, { color: colors.text }]}>{category.name}</Text>
+            <Text style={[styles.completionRate, { color: colors.text }]}>{completionRate}% Complete</Text>
           </View>
         </View>
 
@@ -225,129 +203,93 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ navigation }
             style={styles.statItem}
             onPress={() => navigateToGoals(category.name)}
           >
-            <Text style={styles.statNumber}>{category.totalGoals}</Text>
-            <Text style={styles.statLabel}>Goals</Text>
-            <Text style={styles.statSubtext}>
+            <Text style={[styles.statNumber, { color: colors.text }]}>{category.totalGoals}</Text>
+            <Text style={[styles.statLabel, { color: colors.text }]}>Goals</Text>
+            <Text style={[styles.statSubtext, { color: colors.text }]}>
               {category.activeGoals} active • {category.completedGoals} done
             </Text>
           </TouchableOpacity>
 
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
 
           <TouchableOpacity 
             style={styles.statItem}
             onPress={() => navigateToSchedules(category.name)}
           >
-            <Text style={styles.statNumber}>{category.totalSchedules}</Text>
-            <Text style={styles.statLabel}>Tasks</Text>
-            <Text style={styles.statSubtext}>
+            <Text style={[styles.statNumber, { color: colors.text }]}>{category.totalSchedules}</Text>
+            <Text style={[styles.statLabel, { color: colors.text }]}>Tasks</Text>
+            <Text style={[styles.statSubtext, { color: colors.text }]}>
               {category.completedSchedules} completed
             </Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.progressBarContainer}>
-          <View style={styles.progressBarBackground}>
+          <View style={[styles.progressBarBackground, { backgroundColor: colors.border }]}>
             <View 
               style={[
                 styles.progressBarFill, 
                 { 
                   width: `${completionRate}%`,
-                  backgroundColor: categoryInfo?.color || '#7C3AED'
+                  backgroundColor: categoryInfo?.color || colors.primary
                 }
               ]} 
             />
           </View>
         </View>
-
-        {/* Priority Badges */}
-        {categoryPriority?.is_primary && (
-          <View style={styles.primaryBadge}>
-            <Text style={styles.primaryBadgeText}>PRIMARY FOCUS</Text>
-          </View>
-        )}
-        {!categoryPriority?.is_primary && categoryPriority && categoryPriority.priority_score > 25 && (
-          <View style={styles.secondaryBadge}>
-            <Text style={styles.secondaryBadgeText}>FOCUS AREA</Text>
-          </View>
-        )}
       </View>
     )
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar backgroundColor="#7C3AED" barStyle="light-content" />
-      
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Categories</Text>
-        <Text style={styles.headerSubtitle}>
-          {primaryCategory ? `Focusing on ${primaryCategory}` : 'Organize your goals and tasks'}
-        </Text>
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        
+        <View style={[styles.header, { backgroundColor: colors.background }]}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Categories</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.text }]}>Organize your goals and tasks</Text>
+        </View>
 
-      <ScrollView
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading categories...</Text>
-          </View>
-        ) : (
-          <>
-            {/* Your Focus Areas Section */}
-            {(primaryCategory || secondaryCategories.length > 0) && (
-              <View style={styles.focusSection}>
-                <Text style={styles.focusSectionTitle}>🎯 Your Focus Areas</Text>
-                <Text style={styles.focusSectionSubtitle}>
-                  Categories you've prioritized for your goals
-                </Text>
-                {getOrderedCategoryData()
-                  .filter(category => 
-                    category.name === primaryCategory || secondaryCategories.includes(category.name)
-                  )
-                  .map((category, index) => renderCategoryCard(category, index, true))
-                }
-              </View>
-            )}
-
-            {/* All Categories Section */}
-            <View style={styles.allCategoriesSection}>
-              <Text style={styles.sectionTitle}>
-                {(primaryCategory || secondaryCategories.length > 0) ? 'All Categories' : 'Your Categories'}
-              </Text>
-              {getOrderedCategoryData().map((category, index) => renderCategoryCard(category, index, false))}
+        <ScrollView
+          style={[styles.content, { backgroundColor: colors.background }]}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={[styles.loadingText, { color: colors.text }]}>Loading categories...</Text>
             </View>
-          </>
-        )}
-      </ScrollView>
+          ) : (
+            categoryData.map((category, index) => renderCategoryCard(category, index))
+          )}
+        </ScrollView>
 
-      {/* Bottom Navigation */}
-      <View style={[styles.bottomNav, { paddingBottom: Math.max(8, insets.bottom) }]}>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
-          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
-          <Text style={styles.navLabel}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor="#7C3AED" />
-          <Text style={styles.navLabelActive}>Categories</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
-          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
-          <Text style={styles.navLabel}>Goals</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
-          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
-          <Text style={styles.navLabel}>Schedule</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
-          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor="#808080" />
-          <Text style={styles.navLabel}>Profile</Text>
-        </TouchableOpacity>
+        {/* Bottom Navigation */}
+        <View style={[styles.bottomNav, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(8, insets.bottom) }]}>
+          <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
+            <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
+            <Text style={[styles.navLabel, { color: colors.text }]}>Home</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
+            <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor={colors.primary} />
+            <Text style={[styles.navLabelActive, { color: colors.primary }]}>Categories</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
+            <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
+            <Text style={[styles.navLabel, { color: colors.text }]}>Goals</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
+            <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
+            <Text style={[styles.navLabel, { color: colors.text }]}>Schedule</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
+            <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
+            <Text style={[styles.navLabel, { color: colors.text }]}>Profile</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   )
 }
 
@@ -363,51 +305,28 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#FFFFFF',
   },
   header: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#000000',
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: '#E5E7EB',
+    color: 'headerSubtitle',
   },
   content: {
     flex: 1,
   },
   scrollContent: {
     padding: 20,
-  },
-  focusSection: {
-    marginBottom: 32,
-  },
-  focusSectionTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 6,
-  },
-  focusSectionSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 20,
-  },
-  allCategoriesSection: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 16,
   },
   loadingContainer: {
     flex: 1,
@@ -429,20 +348,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    position: 'relative',
-  },
-  categoryCardPrimary: {
-    borderWidth: 2,
-    borderColor: '#7C3AED',
-    backgroundColor: '#F8F7FF',
-    shadowColor: '#7C3AED',
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  categoryCardFocus: {
-    borderWidth: 1,
-    borderColor: '#10B981',
   },
   categoryHeader: {
     flexDirection: 'row',
@@ -776,37 +681,5 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 8,
     position: 'absolute',
     bottom: 3,
-  },
-
-  // Priority badges for category cards
-  primaryBadge: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    backgroundColor: '#7C3AED',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  primaryBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textTransform: 'uppercase',
-  },
-  secondaryBadge: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    backgroundColor: '#10B981',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  secondaryBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textTransform: 'uppercase',
   },
 })

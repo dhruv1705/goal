@@ -61,12 +61,39 @@ class GoalParser {
       const nextGoalStart = i + 1 < goalMatches.length ? response.indexOf(goalMatches[i + 1][0]) : response.length
       const goalBlock = response.substring(goalStart, nextGoalStart)
       
-      // Look for **Tasks:** in this goal block
+      // Look for tasks in multiple possible formats
       let tasksText = ''
-      const tasksMatch = goalBlock.match(/\*\*Tasks?\*\*:\s*\n?([\s\S]*)/i)
-      if (tasksMatch) {
-        // Remove the "Does this capture" part if it exists
-        tasksText = tasksMatch[1].split(/\n\n.*Does this/)[0].trim()
+      
+      // Try multiple task section patterns
+      const taskPatterns = [
+        /\*\*Tasks?\*\*:\s*\n?([\s\S]*)/i,           // **Tasks:**
+        /\*\*Action Steps?\*\*:\s*\n?([\s\S]*)/i,    // **Action Steps:**
+        /\*\*Steps?\*\*:\s*\n?([\s\S]*)/i,           // **Steps:**
+        /\*\*To achieve this\*\*:\s*\n?([\s\S]*)/i,  // **To achieve this:**
+        /Here's what you can do:\s*\n?([\s\S]*)/i,   // Here's what you can do:
+        /You should:\s*\n?([\s\S]*)/i,               // You should:
+        /Action plan:\s*\n?([\s\S]*)/i,              // Action plan:
+      ]
+      
+      let tasksMatch = null
+      for (const pattern of taskPatterns) {
+        tasksMatch = goalBlock.match(pattern)
+        if (tasksMatch) {
+          tasksText = tasksMatch[1].split(/\n\n.*Does this/)[0].trim()
+          // Found tasks with this pattern
+          break
+        }
+      }
+      
+      // If no explicit task section, look for bullet points anywhere in the goal block
+      if (!tasksMatch && (goalBlock.includes('-') || goalBlock.includes('•') || goalBlock.includes('*'))) {
+        // Extract lines that look like tasks (start with -, •, *, or numbers)
+        const lines = goalBlock.split('\n')
+        const taskLines = lines.filter(line => {
+          const trimmed = line.trim()
+          return trimmed.match(/^[-•*]\s+.+/) || trimmed.match(/^\d+\.\s+.+/)
+        })
+        tasksText = taskLines.join('\n')
       }
 
       // Parse category

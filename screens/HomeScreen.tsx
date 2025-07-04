@@ -746,9 +746,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={isDarkTheme ? '#9CA3AF' : '#6B7280'} />
           <Text style={[styles.navLabel, { color: isDarkTheme ? '#9CA3AF' : '#6B7280' }]}>Schedule</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
-          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor={isDarkTheme ? '#9CA3AF' : '#6B7280'} />
-          <Text style={[styles.navLabel, { color: isDarkTheme ? '#9CA3AF' : '#6B7280' }]}>Profile</Text>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Talk')}>
+          <Image source={IMAGES.TALK} style={styles.navIcon} resizeMode="contain" tintColor={isDarkTheme ? '#9CA3AF' : '#6B7280'} />
+          <Text style={[styles.navLabel, { color: isDarkTheme ? '#9CA3AF' : '#6B7280' }]}>Talk</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

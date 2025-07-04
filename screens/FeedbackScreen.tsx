@@ -534,9 +534,9 @@ export const FeedbackScreen: React.FC<FeedbackScreenProps> = ({ navigation }) =>
           <Image source={IMAGES.SCHEDULES} style={styles.navIcon} tintColor={colors.text} />
           <Text style={[styles.navLabel, { color: colors.text }]}>Schedule</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Profile')}>
-          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} tintColor={colors.text} />
-          <Text style={[styles.navLabel, { color: colors.text }]}>Profile</Text>
+        <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Talk')}>
+          <Image source={IMAGES.TALK} style={styles.navIcon} tintColor={colors.text} />
+          <Text style={[styles.navLabel, { color: colors.text }]}>Talk</Text>
         </TouchableOpacity>
       </View>
     </View>

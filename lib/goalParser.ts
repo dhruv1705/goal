@@ -69,15 +69,11 @@ class GoalParser {
         tasksText = tasksMatch[1].split(/\n\n.*Does this/)[0].trim()
       }
 
-      console.log(`🔍 Goal "${title}" - Tasks section found:`, !!tasksMatch)
-      console.log(`🔍 Goal "${title}" - Raw tasks text:`, tasksText)
-
       // Parse category
       const category = this.parseCategory(categoryText)
 
       // Parse tasks from the goal block
       const tasks = this.parseTasks(tasksText)
-      console.log(`🔍 Goal "${title}" - Parsed tasks:`, tasks)
 
       const goal: ParsedGoal = {
         title,

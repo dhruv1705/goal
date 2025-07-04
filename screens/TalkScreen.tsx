@@ -14,14 +14,15 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '@react-navigation/native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
 import { claudeService, RateLimitError } from '../lib/claude'
 import { goalParser, type ParsedGoal } from '../lib/goalParser'
-import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import IMAGES from '../assets'
+import { useAuth } from '../contexts/AuthContext'
 import { Tables } from '../types/supabase'
+import IMAGES from '../assets'
 
 type ChatSession = Tables<'chat_sessions'>
 type ChatMessage = Tables<'chat_messages'>
@@ -37,6 +38,8 @@ interface TalkScreenProps {
   navigation: any
 }
 
+const INITIAL_GREETING = "Hi! I'm your goal-setting assistant. I'll help you create actionable goals and tasks.\n\nWhich area of your life would you like to improve?\n• Physical Health\n• Mental Health\n• Finance\n• Social"
+
 export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
   const insets = useSafeAreaInsets()
   const { colors } = useTheme()
@@ -44,7 +47,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '0',
-      text: "Hi! I'm your goal-setting assistant. I'll help you create actionable goals and tasks.\n\nWhich area of your life would you like to improve?\n• Physical Health\n• Mental Health\n• Finance\n• Social",
+      text: INITIAL_GREETING,
       isUser: false,
       timestamp: new Date()
     }
@@ -77,7 +80,11 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
         .order('updated_at', { ascending: false })
         .limit(10)
 
-      if (error) throw error
+      if (error) {
+        console.error('Error loading chat history:', error)
+        return
+      }
+
       setChatSessions(sessions || [])
     } catch (error) {
       console.error('Error loading chat history:', error)
@@ -101,7 +108,16 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('Error creating session:', error)
+      throw error
+    }
+
+    if (!session) {
+      throw new Error('Failed to create session: session is null or undefined')
+    }
+    
+    await loadChatHistory() // Refresh history immediately
     return session.id
   }
 
@@ -109,7 +125,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
     if (!user) return
 
     try {
-      await supabase
+      const { data, error } = await supabase
         .from('chat_messages')
         .insert([{
           session_id: sessionId,
@@ -118,11 +134,20 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
           is_user: isUser
         }])
 
+      if (error) {
+        console.error('Error inserting message:', error)
+        return
+      }
+
       // Update session timestamp
-      await supabase
+      const { error: updateError } = await supabase
         .from('chat_sessions')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', sessionId)
+
+      if (updateError) {
+        console.error('Error updating session timestamp:', updateError)
+      }
 
     } catch (error) {
       console.error('Error saving message to history:', error)
@@ -147,7 +172,12 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
       }))
 
       setMessages([
-        messages[0], // Keep the initial AI greeting
+        {
+          id: '0',
+          text: INITIAL_GREETING,
+          isUser: false,
+          timestamp: new Date()
+        },
         ...sessionMessages
       ])
       setCurrentSessionId(sessionId)
@@ -160,7 +190,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
   const startNewConversation = () => {
     setMessages([{
       id: '0',
-      text: "Hi! I'm your goal-setting assistant. I'll help you create actionable goals and tasks.\n\nWhich area of your life would you like to improve?\n• Physical Health\n• Mental Health\n• Finance\n• Social",
+      text: INITIAL_GREETING,
       isUser: false,
       timestamp: new Date()
     }])
@@ -293,7 +323,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
         chatMessage += ' Is there anything else you\'d like to work on?'
 
         const successMessage: Message = {
-          id: Date.now().toString(),
+          id: `success-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           text: chatMessage,
           isUser: false,
           timestamp: new Date()
@@ -320,7 +350,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
     }
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       text: inputText.trim(),
       isUser: true,
       timestamp: new Date()
@@ -359,7 +389,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
       const parseResult = goalParser.parseAIResponse(response.response)
       
       const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
+        id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         text: response.response,
         isUser: false,
         timestamp: new Date()
@@ -394,7 +424,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
       
       // Add error message to chat
       const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         text: "I'm sorry, I'm having trouble responding right now. Please try again.",
         isUser: false,
         timestamp: new Date()
@@ -521,7 +551,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
             </Text>
             <ScrollView style={styles.goalsPreview} showsVerticalScrollIndicator={false}>
               {parsedGoals.map((goal, index) => (
-                <View key={index} style={[styles.goalPreviewCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <View key={`goal-${index}-${goal.title.substring(0, 10)}`} style={[styles.goalPreviewCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
                   <Text style={[styles.goalPreviewTitle, { color: colors.text }]}>{goal.title}</Text>
                   <Text style={[styles.goalPreviewCategory, { color: colors.primary }]}>{goal.category}</Text>
                   <Text style={[styles.goalPreviewDescription, { color: colors.text }]} numberOfLines={2}>
@@ -535,7 +565,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
                       {(() => {
                         const taskDefaults = goalParser.generateTaskDefaults(goal.tasks, goal.category)
                         return goal.tasks.slice(0, 3).map((task, taskIndex) => (
-                          <Text key={taskIndex} style={[styles.taskPreviewItem, { color: colors.text }]}>
+                          <Text key={`task-${index}-${taskIndex}-${task.substring(0, 10)}`} style={[styles.taskPreviewItem, { color: colors.text }]}>
                             • {task} ({taskDefaults[taskIndex].schedule_time})
                           </Text>
                         ))

@@ -143,8 +143,7 @@ class GoalParser {
       const taskPatterns = [
         /^[-•*]\s+(.+)$/,           // - Task, • Task, * Task
         /^\d+\.\s+(.+)$/,          // 1. Task, 2. Task
-        /^[-*]\s+\[\s*\]\s+(.+)$/, // - [ ] Task, * [ ] Task
-        /^(.+)$/                   // Plain text fallback
+        /^[-*]\s+\[\s*\]\s+(.+)$/  // - [ ] Task, * [ ] Task
       ]
       
       let taskFound = false

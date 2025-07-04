@@ -98,9 +98,11 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
         createdGoalsCount++
 
         // Create tasks for this goal if any exist
+        console.log(`Debug: Goal "${goal.title}" (${goal.category}) has ${goal.tasks.length} tasks:`, goal.tasks)
         if (goal.tasks.length > 0) {
           // Generate smart defaults for tasks
           const taskDefaults = goalParser.generateTaskDefaults(goal.tasks, goal.category)
+          console.log(`Debug: Generated ${taskDefaults.length} task defaults for ${goal.category}:`, taskDefaults)
           
           // Prepare tasks for insertion
           const tasksToInsert = taskDefaults.map(taskDefault => ({
@@ -123,6 +125,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
           if (tasksError) {
             console.error('Error creating tasks:', tasksError)
           } else {
+            console.log(`Successfully created ${tasksData?.length || 0} tasks`)
             createdTasksCount += tasksData?.length || 0
           }
         }

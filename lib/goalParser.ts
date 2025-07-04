@@ -72,8 +72,8 @@ class GoalParser {
       // Parse category
       const category = this.parseCategory(categoryText)
 
-      // Parse tasks - for now, return empty array since we're focusing on goals
-      const tasks: string[] = []
+      // Parse tasks from the goal block
+      const tasks = this.parseTasks(tasksText)
 
       const goal: ParsedGoal = {
         title,
@@ -101,11 +101,12 @@ class GoalParser {
   private parseCategory(categoryText: string): ParsedGoal['category'] {
     const normalizedCategory = categoryText.toLowerCase().trim()
     
-    if (normalizedCategory.includes('physical') || normalizedCategory.includes('health') || normalizedCategory.includes('fitness')) {
-      return 'Physical Health'
-    }
+    // Check more specific categories first to avoid overlap
     if (normalizedCategory.includes('mental') || normalizedCategory.includes('mind') || normalizedCategory.includes('stress')) {
       return 'Mental Health'
+    }
+    if (normalizedCategory.includes('physical') || normalizedCategory.includes('fitness') || normalizedCategory.includes('exercise')) {
+      return 'Physical Health'
     }
     if (normalizedCategory.includes('finance') || normalizedCategory.includes('money') || normalizedCategory.includes('budget')) {
       return 'Finance'
@@ -114,12 +115,72 @@ class GoalParser {
       return 'Social'
     }
     
+    // Generic 'health' without specific qualifier defaults to Physical Health
+    if (normalizedCategory.includes('health')) {
+      return 'Physical Health'
+    }
+    
     return 'Physical Health' // Default fallback
   }
 
   private parseTasks(tasksText: string): string[] {
-    // For now, returning empty array to focus on goals
-    return []
+    if (!tasksText.trim()) {
+      return []
+    }
+
+    // Parse task list from various formats
+    const tasks: string[] = []
+    
+    // Split by lines and look for task patterns
+    const lines = tasksText.split('\n')
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim()
+      
+      // Skip empty lines
+      if (!trimmedLine) continue
+      
+      // Match various task list formats:
+      // - Task name
+      // • Task name  
+      // * Task name
+      // 1. Task name
+      // - [ ] Task name
+      const taskPatterns = [
+        /^[-•*]\s+(.+)$/,           // - Task, • Task, * Task
+        /^\d+\.\s+(.+)$/,          // 1. Task, 2. Task
+        /^[-*]\s+\[\s*\]\s+(.+)$/  // - [ ] Task, * [ ] Task
+      ]
+      
+      let taskFound = false
+      for (const pattern of taskPatterns) {
+        const match = trimmedLine.match(pattern)
+        if (match && match[1]) {
+          const taskTitle = match[1].trim()
+          
+          // Filter out non-task content
+          if (taskTitle.length > 0 && 
+              !taskTitle.toLowerCase().includes('does this') &&
+              !taskTitle.toLowerCase().includes('sound good') &&
+              !taskTitle.toLowerCase().includes('what do you think') &&
+              taskTitle.length < 100) { // Reasonable task title length
+            tasks.push(taskTitle)
+            taskFound = true
+            break
+          }
+        }
+      }
+      
+      // If no pattern matched but it looks like a task, add it
+      if (!taskFound && trimmedLine.length > 3 && trimmedLine.length < 100) {
+        // Check if it's likely a task (not a question or long description)
+        if (!trimmedLine.includes('?') && !trimmedLine.toLowerCase().includes('does this')) {
+          tasks.push(trimmedLine)
+        }
+      }
+    }
+    
+    return tasks
   }
 
   private parseTargetDate(targetText: string): string {
@@ -159,6 +220,87 @@ class GoalParser {
   private extractNumber(text: string): number | null {
     const match = text.match(/(\d+)/)
     return match ? parseInt(match[1], 10) : null
+  }
+
+  // Generate smart defaults for task scheduling
+  generateTaskDefaults(tasks: string[], goalCategory: string) {
+    const today = new Date()
+    const todayStr = today.toISOString().split('T')[0]
+    
+    return tasks.map((taskTitle, index) => {
+      const defaultTime = this.getSmartTimeForTask(taskTitle, index)
+      const priority = this.getTaskPriority(taskTitle)
+      
+      return {
+        title: taskTitle,
+        description: `Task for ${goalCategory.toLowerCase()} goal`,
+        schedule_date: todayStr,
+        schedule_time: defaultTime,
+        priority: priority,
+        category: goalCategory
+      }
+    })
+  }
+
+  private getSmartTimeForTask(taskTitle: string, index: number): string {
+    const lowerTitle = taskTitle.toLowerCase()
+    
+    // Time-specific keywords
+    if (lowerTitle.includes('morning') || lowerTitle.includes('breakfast') || lowerTitle.includes('wake')) {
+      return '07:00'
+    }
+    if (lowerTitle.includes('lunch') || lowerTitle.includes('noon') || lowerTitle.includes('midday')) {
+      return '12:00'
+    }
+    if (lowerTitle.includes('evening') || lowerTitle.includes('dinner') || lowerTitle.includes('night')) {
+      return '18:00'
+    }
+    if (lowerTitle.includes('afternoon')) {
+      return '15:00'
+    }
+    
+    // Activity-specific defaults
+    if (lowerTitle.includes('gym') || lowerTitle.includes('workout') || lowerTitle.includes('exercise')) {
+      return '07:00' // Morning workout
+    }
+    if (lowerTitle.includes('meal prep') || lowerTitle.includes('cooking') || lowerTitle.includes('prep')) {
+      return '18:00' // Evening prep
+    }
+    if (lowerTitle.includes('water') || lowerTitle.includes('drink') || lowerTitle.includes('hydrate')) {
+      return '09:00' // Start hydration early
+    }
+    if (lowerTitle.includes('meditation') || lowerTitle.includes('mindfulness') || lowerTitle.includes('relax')) {
+      return '08:00' // Morning meditation
+    }
+    if (lowerTitle.includes('read') || lowerTitle.includes('study') || lowerTitle.includes('learn')) {
+      return '20:00' // Evening reading
+    }
+    
+    // Default spacing: spread tasks throughout the day
+    const baseHours = [9, 12, 15, 18, 20] // 9 AM, 12 PM, 3 PM, 6 PM, 8 PM
+    const hour = baseHours[index % baseHours.length]
+    return `${hour.toString().padStart(2, '0')}:00`
+  }
+
+  private getTaskPriority(taskTitle: string): 'high' | 'medium' | 'low' {
+    const lowerTitle = taskTitle.toLowerCase()
+    
+    // High priority keywords
+    if (lowerTitle.includes('urgent') || lowerTitle.includes('important') || 
+        lowerTitle.includes('deadline') || lowerTitle.includes('critical') ||
+        lowerTitle.includes('must') || lowerTitle.includes('emergency')) {
+      return 'high'
+    }
+    
+    // Low priority keywords  
+    if (lowerTitle.includes('optional') || lowerTitle.includes('when possible') ||
+        lowerTitle.includes('if time') || lowerTitle.includes('eventually') ||
+        lowerTitle.includes('try to') || lowerTitle.includes('consider')) {
+      return 'low'
+    }
+    
+    // Default to medium
+    return 'medium'
   }
 }
 

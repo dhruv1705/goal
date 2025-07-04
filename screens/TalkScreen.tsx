@@ -12,6 +12,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '@react-navigation/native'
@@ -19,6 +20,7 @@ import { claudeService, RateLimitError } from '../lib/claude'
 import { goalParser, type ParsedGoal } from '../lib/goalParser'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import IMAGES from '../assets'
 
 interface Message {
   id: string
@@ -70,6 +72,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
 
     setIsLoading(true)
     let createdGoalsCount = 0
+    let createdTasksCount = 0
 
     try {
       for (const goal of parsedGoals) {
@@ -93,20 +96,63 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
         }
 
         createdGoalsCount++
+
+        // Create tasks for this goal if any exist
+        if (goal.tasks.length > 0) {
+          // Generate smart defaults for tasks
+          const taskDefaults = goalParser.generateTaskDefaults(goal.tasks, goal.category)
+          
+          // Prepare tasks for insertion
+          const tasksToInsert = taskDefaults.map(taskDefault => ({
+            user_id: user.id,
+            title: taskDefault.title,
+            description: taskDefault.description,
+            schedule_date: taskDefault.schedule_date,
+            schedule_time: taskDefault.schedule_time,
+            priority: taskDefault.priority,
+            goal_id: goalData.id, // Link to the created goal
+            completed: false
+          }))
+
+          // Insert tasks
+          const { data: tasksData, error: tasksError } = await supabase
+            .from('schedules')
+            .insert(tasksToInsert)
+            .select()
+
+          if (tasksError) {
+            console.error('Error creating tasks:', tasksError)
+          } else {
+            createdTasksCount += tasksData?.length || 0
+          }
+        }
       }
 
       // Show success message
       if (createdGoalsCount > 0) {
+        // Create detailed success message
+        let alertMessage = `Created ${createdGoalsCount} goal${createdGoalsCount !== 1 ? 's' : ''}`
+        if (createdTasksCount > 0) {
+          alertMessage += ` and ${createdTasksCount} task${createdTasksCount !== 1 ? 's' : ''}`
+        }
+        alertMessage += '!\n\n'
+        
+        if (createdTasksCount > 0) {
+          alertMessage += 'Goals are in the Goals tab, and your tasks are scheduled for today in the Schedule tab.'
+        } else {
+          alertMessage += 'You can view them in the Goals tab.'
+        }
+
         Alert.alert(
           'Success! 🎉',
-          `Created ${createdGoalsCount} goal${createdGoalsCount !== 1 ? 's' : ''}.\n\nYou can view them in the Goals tab.`,
+          alertMessage,
           [
             {
-              text: 'View Goals',
+              text: createdTasksCount > 0 ? 'View Schedule' : 'View Goals',
               onPress: () => {
                 setShowGoalConfirmation(false)
                 setParsedGoals([])
-                navigation.navigate('Goals')
+                navigation.navigate(createdTasksCount > 0 ? 'Schedule' : 'Goals')
               }
             },
             {
@@ -120,9 +166,22 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
         )
 
         // Add success message to chat
+        let chatMessage = `Great! I've created ${createdGoalsCount} goal${createdGoalsCount !== 1 ? 's' : ''}`
+        if (createdTasksCount > 0) {
+          chatMessage += ` and ${createdTasksCount} task${createdTasksCount !== 1 ? 's' : ''} scheduled for today`
+        }
+        chatMessage += ' for you.'
+        
+        if (createdTasksCount > 0) {
+          chatMessage += ' Check your Schedule tab to see your tasks for today!'
+        } else {
+          chatMessage += ' You can find them in your Goals section.'
+        }
+        chatMessage += ' Is there anything else you\'d like to work on?'
+
         const successMessage: Message = {
           id: Date.now().toString(),
-          text: `Great! I've created ${createdGoalsCount} goal${createdGoalsCount !== 1 ? 's' : ''} for you. You can find them in your Goals section. Is there anything else you'd like to work on?`,
+          text: chatMessage,
           isUser: false,
           timestamp: new Date()
         }
@@ -278,7 +337,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
       </View>
 
       <KeyboardAvoidingView 
-        style={styles.flex} 
+        style={[styles.flex, { paddingBottom: 80 }]} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
 
@@ -297,9 +356,24 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
                     {goal.description}
                   </Text>
                   {goal.tasks.length > 0 && (
-                    <Text style={[styles.goalPreviewTasks, { color: colors.text }]}>
-                      {goal.tasks.length} task{goal.tasks.length !== 1 ? 's' : ''} included
-                    </Text>
+                    <View style={styles.tasksPreviewSection}>
+                      <Text style={[styles.goalPreviewTasks, { color: colors.text }]}>
+                        {goal.tasks.length} task{goal.tasks.length !== 1 ? 's' : ''} included:
+                      </Text>
+                      {(() => {
+                        const taskDefaults = goalParser.generateTaskDefaults(goal.tasks, goal.category)
+                        return goal.tasks.slice(0, 3).map((task, taskIndex) => (
+                          <Text key={taskIndex} style={[styles.taskPreviewItem, { color: colors.text }]}>
+                            • {task} ({taskDefaults[taskIndex].schedule_time})
+                          </Text>
+                        ))
+                      })()}
+                      {goal.tasks.length > 3 && (
+                        <Text style={[styles.taskPreviewMore, { color: colors.text }]}>
+                          ... and {goal.tasks.length - 3} more
+                        </Text>
+                      )}
+                    </View>
                   )}
                 </View>
               ))}
@@ -311,7 +385,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
                 disabled={isLoading}
               >
                 <Text style={styles.goalConfirmButtonText}>
-                  {isLoading ? 'Creating...' : 'Create Goals'}
+                  {isLoading ? 'Creating...' : 'Create Goals & Tasks'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity 
@@ -362,6 +436,30 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Bottom Navigation */}
+      <View style={[styles.bottomNav, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(8, insets.bottom) }]}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
+          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
+          <Text style={[styles.navLabel, { color: colors.text }]}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
+          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
+          <Text style={[styles.navLabel, { color: colors.text }]}>Categories</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
+          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
+          <Text style={[styles.navLabel, { color: colors.text }]}>Goals</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
+          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
+          <Text style={[styles.navLabel, { color: colors.text }]}>Schedule</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
+          <Image source={IMAGES.TALK} style={styles.navIcon} resizeMode="contain" tintColor={colors.primary}/>
+          <Text style={[styles.navLabelActive, { color: colors.primary }]}>Talk</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   )
 }
@@ -558,6 +656,70 @@ const styles = StyleSheet.create({
   },
   goalConfirmButtonTextSecondary: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  tasksPreviewSection: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(124, 58, 237, 0.2)',
+  },
+  taskPreviewItem: {
+    fontSize: 12,
+    marginBottom: 2,
+    paddingLeft: 4,
+  },
+  taskPreviewMore: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    opacity: 0.7,
+    paddingLeft: 4,
+    marginTop: 2,
+  },
+  bottomNav: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    borderTopWidth: 0.5,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 12,
+    paddingHorizontal: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  navItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  navItemActive: {
+    // Active state styling handled via tintColor and text color
+  },
+  navIcon: {
+    width: 24,
+    height: 24,
+    marginBottom: 4,
+    opacity: 0.6,
+  },
+  navLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  navLabelActive: {
+    fontSize: 12,
+    color: '#7C3AED',
+    marginTop: 4,
     fontWeight: '600',
   },
 })

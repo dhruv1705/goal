@@ -1,7 +1,7 @@
 import React, { useState,useMemo } from 'react'
 import { StatusBar } from 'expo-status-bar'
 import { NavigationContainer } from '@react-navigation/native'
-import { createStackNavigator } from '@react-navigation/stack'
+import { createStackNavigator, StackScreenProps } from '@react-navigation/stack'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { PreferencesProvider, usePreferences } from './contexts/PreferencesContext'
@@ -17,10 +17,13 @@ import { GoalDetailScreen } from './screens/GoalDetailScreen'
 import { FeedbackScreen } from './screens/FeedbackScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { CategoriesScreen } from './screens/CategoriesScreen'
-import { View, ActivityIndicator, StyleSheet } from 'react-native'
+import OtpVerificationScreen from './screens/OtpVerificationScreen' // Import the new screen
+import { View, ActivityIndicator, StyleSheet, Text } from 'react-native'
 import DarkThemes from './theme/DarkThemes'
 import LightTheme from './theme/LightTheme'
 import {AppContext, AppContextProvider} from './theme/AppContext'
+import { RootStackParamList } from './types' 
+import { usePushNotifications } from './notification/notification'
 const Stack = createStackNavigator()
 
 const AuthStack = () => (
@@ -42,7 +45,12 @@ const MainStack = () => (
     <Stack.Screen name="Profile" component={ProfileScreen} />
     <Stack.Screen name="Goals" component={GoalsScreen} />
     <Stack.Screen name="AddEditGoal" component={AddEditGoalScreen} />
-    <Stack.Screen name="GoalDetail" component={GoalDetailScreen} />
+    <Stack.Screen 
+      name="GoalDetail" 
+      children={({ navigation, route }: StackScreenProps<RootStackParamList, 'GoalDetail'>) => (
+        <GoalDetailScreen navigation={navigation} route={route} />
+      )}
+    />
     <Stack.Screen name="Feedback" component={FeedbackScreen} />
     <Stack.Screen 
       name="Onboarding" 
@@ -63,6 +71,11 @@ const AppContent = () => {
   const { onboardingCompleted, loading: preferencesLoading, refreshPreferences } = usePreferences()
   const [forceMainApp, setForceMainApp] = React.useState(false)
   const { isDarkTheme } = React.useContext(AppContext)
+
+  const {expoPushToken,notification}=usePushNotifications(); 
+  const data=JSON.stringify(notification,undefined,2);
+
+  console.log('Expo Push Token:', expoPushToken); 
 
   const loading = authLoading || (user && preferencesLoading)
   const shouldShowOnboarding = user && !onboardingCompleted && !forceMainApp
@@ -89,45 +102,58 @@ const AppContent = () => {
   console.log(shouldShowOnboarding ? 'Showing onboarding screen' : 'Showing main app navigation')
 
   return (
-    <NavigationContainer theme={isDarkTheme ? DarkThemes : LightTheme}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {shouldShowOnboarding ? (
-          <Stack.Screen 
-            name="Onboarding" 
-            children={(props) => (
-              <OnboardingScreen 
-                {...props} 
-                onComplete={() => {
-                  console.log('🎯 Onboarding onComplete callback triggered - forcing main app')
-                  console.log('🔄 Setting forceMainApp to true...')
-                  setForceMainApp(true)
-                  console.log('📡 Refreshing preferences...')
-                  refreshPreferences()
-                  console.log('✅ onComplete callback finished')
-                }} 
+    <>
+      <NavigationContainer theme={isDarkTheme ? DarkThemes : LightTheme}>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {shouldShowOnboarding ? (
+            <Stack.Screen 
+              name="Onboarding" 
+              children={(props) => (
+                <OnboardingScreen 
+                  {...props} 
+                  onComplete={() => {
+                    console.log('🎯 Onboarding onComplete callback triggered - forcing main app')
+                    console.log('🔄 Setting forceMainApp to true...')
+                    setForceMainApp(true)
+                    console.log('📡 Refreshing preferences...')
+                    refreshPreferences()
+                    console.log('✅ onComplete callback finished')
+                  }} 
+                />
+              )}
+            />
+          ) : user ? (
+            <>
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="Categories" component={CategoriesScreen} />
+              <Stack.Screen name="Schedule" component={ScheduleScreen} />
+              <Stack.Screen name="AddEdit" component={AddEditScheduleScreen} />
+              <Stack.Screen name="Profile" component={ProfileScreen} />
+              <Stack.Screen name="Goals" component={GoalsScreen} />
+              <Stack.Screen name="AddEditGoal" component={AddEditGoalScreen} />
+              <Stack.Screen 
+                name="GoalDetail" 
+                children={({ navigation, route }: StackScreenProps<RootStackParamList, 'GoalDetail'>) => (
+                  <GoalDetailScreen navigation={navigation} route={route} />
+                )}
               />
-            )}
-          />
-        ) : user ? (
-          <>
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="Categories" component={CategoriesScreen} />
-            <Stack.Screen name="Schedule" component={ScheduleScreen} />
-            <Stack.Screen name="AddEdit" component={AddEditScheduleScreen} />
-            <Stack.Screen name="Profile" component={ProfileScreen} />
-            <Stack.Screen name="Goals" component={GoalsScreen} />
-            <Stack.Screen name="AddEditGoal" component={AddEditGoalScreen} />
-            <Stack.Screen name="GoalDetail" component={GoalDetailScreen} />
-            <Stack.Screen name="Feedback" component={FeedbackScreen} />
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="SignUp" component={SignUpScreen} />
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+              <Stack.Screen name="Feedback" component={FeedbackScreen} />
+            </>
+          ) : (
+            <>
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="SignUp" component={SignUpScreen} />
+              <Stack.Screen 
+                name="OtpVerification" 
+                children={({ navigation, route }: StackScreenProps<RootStackParamList, 'OtpVerification'>) => (
+                  <OtpVerificationScreen navigation={navigation} route={route} />
+                )}
+              />
+            </>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </>
   )
 }
 
@@ -158,5 +184,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
+  },
+  notificationDisplayContainer: { // New style for the notification display
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    right: 20,
+    zIndex: 9999,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: 10,
+    borderRadius: 5,
   },
 })

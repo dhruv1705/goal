@@ -20,25 +20,21 @@ import { supabase } from '../lib/supabase'
 import { Tables } from '../types/supabase'
 import IMAGES from '../assets'
 import { useTheme } from '@react-navigation/native'
+import { StackScreenProps } from '@react-navigation/stack' // Import StackScreenProps
+import { RootStackParamList } from '../types' // Import RootStackParamList
 
 type Goal = Tables<'goals'>
-type Schedule = Tables<'schedules'>
+type Schedule = Tables<'schedules'> // Re-add Schedule type
 
-interface GoalDetailScreenProps {
-  navigation: any
-  route: {
-    params: {
-      goal: Goal
-    }
-  }
-}
+// Directly use StackScreenProps for component props
+// No need for a separate interface GoalDetailScreenProps {}
 
-export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, route }) => {
+export const GoalDetailScreen: React.FC<StackScreenProps<RootStackParamList, 'GoalDetail'>> = ({ navigation, route }) => {
   const { goal } = route.params
   const { user } = useAuth()
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
-  const [tasks, setTasks] = useState<Schedule[]>([])
+  const [tasks, setTasks] = useState<Schedule[]>([]) // Use Schedule type
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [showAddTaskModal, setShowAddTaskModal] = useState(false)
@@ -438,10 +434,6 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
     </TouchableOpacity>
   )
 
-  const handleNavigation = (screen: string) => {
-    navigation.navigate(screen)
-  }
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={colors.text === '#ffffff' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
@@ -453,7 +445,7 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Goal Details</Text>
         <TouchableOpacity
-          onPress={() => navigation.navigate('AddEditGoal', { goal })}
+          onPress={() => navigation.navigate('AddEditGoal', { goalId: goal.id })} // Corrected navigation call
           style={[styles.editButton, { backgroundColor: colors.primary }]}
         >
           <Text style={styles.editButtonText}>Edit</Text>
@@ -840,23 +832,23 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
 
       {/* Bottom Navigation */}
       <View style={[styles.bottomNav, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(8, insets.bottom) }]}>
-        <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Home')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
           <Image source={IMAGES.HOME} style={styles.navIcon} tintColor={colors.text} />
           <Text style={[styles.navLabel, { color: colors.text }]}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Categories')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
           <Image source={IMAGES.CATEGORIES} style={styles.navIcon} tintColor={colors.text} />
           <Text style={[styles.navLabel, { color: colors.text }]}>Categories</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Goals')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
           <Image source={IMAGES.GOALS} style={styles.navIcon} tintColor={colors.primary} />
           <Text style={[styles.navLabel, { color: colors.primary }]}>Goals</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Schedule')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
           <Image source={IMAGES.SCHEDULES} style={styles.navIcon} tintColor={colors.text} />
           <Text style={[styles.navLabel, { color: colors.text }]}>Schedule</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Profile')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
           <Image source={IMAGES.ACCOUNT} style={styles.navIcon} tintColor={colors.text} />
           <Text style={[styles.navLabel, { color: colors.text }]}>Profile</Text>
         </TouchableOpacity>

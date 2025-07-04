@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "601056785967",
+    "project_id": "goal-ddc32",
+    "storage_bucket": "goal-ddc32.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:601056785967:android:619fab9e0f43aed5d538da",
+        "android_client_info": {
+          "package_name": "com.dhruv2050.dailyscheduleapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBQ3lnU2Goqv9pXALctpHAP0yITdMsW16g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

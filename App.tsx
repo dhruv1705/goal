@@ -141,11 +141,6 @@ const AppContent = () => {
                   <OtpVerificationScreen navigation={navigation} route={route} />
                 )}
               />
-            </>
-          )}
-        </Stack.Navigator>
-      </NavigationContainer>
-    </>
   )
 }
 

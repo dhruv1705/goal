@@ -456,19 +456,28 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
         </View>
         <View style={styles.taskAccent} />
         <View style={styles.taskDetails}>
-          <Text style={[
-            styles.taskTitle, 
-            { color: colors.text },
-            item.completed && styles.taskTitleCompleted
-          ]}>
-            {item.title}
-          </Text>
+          <View style={styles.taskTitleRow}>
+            <Text style={[
+              styles.taskTitle, 
+              { color: colors.text },
+              item.completed && styles.taskTitleCompleted
+            ]}>
+              {item.title}
+            </Text>
+            {item.is_recurring && (
+              <View style={[styles.recurringBadge, { backgroundColor: colors.primary }]}>
+                <Text style={styles.recurringBadgeText}>🔄</Text>
+              </View>
+            )}
+          </View>
           <Text style={[
             styles.taskCategory, 
             { color: colors.text },
             item.completed && styles.taskCategoryCompleted
           ]}>
             {(item as any).goalCategory || 'General'}
+            {item.is_recurring && ` • ${item.recurrence_type}`}
+            {item.parent_task_id && item.parent_task_id !== item.id && ' • Part of series'}
           </Text>
         </View>
       </View>
@@ -556,10 +565,10 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
             <View style={styles.dateSection}>
               <Text style={[styles.currentDate, { color: colors.primary }]}>{formatDate(currentDate)}</Text>
               <TouchableOpacity 
-                style={[styles.todayButton, { backgroundColor: colors.primary }]}
+                style={[styles.todayButton, { borderColor: colors.primary }]}
                 onPress={() => setCurrentDate(new Date())}
               >
-                <Text style={styles.todayButtonText}>Today</Text>
+                <Text style={[styles.todayButtonText, { color: colors.text }]}>Today</Text>
               </TouchableOpacity>
             </View>
             <TouchableOpacity onPress={() => navigateDate('next')} style={styles.navArrow}>
@@ -578,7 +587,7 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
                   {formatWeekDate(getWeekStart(currentDate))} - {formatWeekDate(getWeekEnd(currentDate))}
                 </Text>
                 <TouchableOpacity 
-                  style={[styles.todayButton, { backgroundColor: colors.primary }]}
+                  style={[styles.todayButton, { borderColor: colors.primary }]}
                   onPress={() => setCurrentDate(new Date())}
                 >
                   <Text style={[styles.todayButtonText, { color: colors.text }]}>Today</Text>
@@ -639,7 +648,7 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
                   {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </Text>
                 <TouchableOpacity 
-                  style={[styles.todayButton, { backgroundColor: colors.primary }]}
+                  style={[styles.todayButton, { borderColor: colors.primary }]}
                   onPress={() => setCurrentDate(new Date())}
                 >
                   <Text style={[styles.todayButtonText, { color: colors.text }]}>Today</Text>
@@ -814,9 +823,9 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
           <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={colors.primary}/>
           <Text style={[styles.navLabelActive, { color: colors.primary }]}>Schedule</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
-          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
-          <Text style={[styles.navLabel, { color: colors.text }]}>Profile</Text>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Talk')}>
+          <Image source={IMAGES.TALK} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
+          <Text style={[styles.navLabel, { color: colors.text }]}>Talk</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -902,15 +911,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   todayButton: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: 'transparent',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#7C3AED',
   },
   todayButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: 'white',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -997,6 +1007,22 @@ const styles = StyleSheet.create({
   taskCategoryCompleted: {
     textDecorationLine: 'line-through',
     color: '#9CA3AF',
+  },
+  taskTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  recurringBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  recurringBadgeText: {
+    fontSize: 12,
+    color: 'white',
   },
   fab: {
     position: 'absolute',

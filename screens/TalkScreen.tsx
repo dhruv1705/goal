@@ -358,14 +358,14 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
                       <Text style={[styles.goalPreviewTasks, { color: colors.text }]}>
                         {goal.tasks.length} task{goal.tasks.length !== 1 ? 's' : ''} included:
                       </Text>
-                      {goal.tasks.slice(0, 3).map((task, taskIndex) => {
-                        const taskDefault = goalParser.generateTaskDefaults([task], goal.category)[0]
-                        return (
+                      {(() => {
+                        const taskDefaults = goalParser.generateTaskDefaults(goal.tasks, goal.category)
+                        return goal.tasks.slice(0, 3).map((task, taskIndex) => (
                           <Text key={taskIndex} style={[styles.taskPreviewItem, { color: colors.text }]}>
-                            • {task} ({taskDefault.schedule_time})
+                            • {task} ({taskDefaults[taskIndex].schedule_time})
                           </Text>
-                        )
-                      })}
+                        ))
+                      })()}
                       {goal.tasks.length > 3 && (
                         <Text style={[styles.taskPreviewMore, { color: colors.text }]}>
                           ... and {goal.tasks.length - 3} more

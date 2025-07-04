@@ -20,28 +20,26 @@ import { supabase } from '../lib/supabase'
 import { Tables } from '../types/supabase'
 import IMAGES from '../assets'
 import { useTheme } from '@react-navigation/native'
-import { StackScreenProps } from '@react-navigation/stack' // Import StackScreenProps
-import { RootStackParamList } from '../types' // Import RootStackParamList
+import { StackScreenProps } from '@react-navigation/stack' 
+import { RootStackParamList } from '../types' 
 
 type Goal = Tables<'goals'>
-type Schedule = Tables<'schedules'> // Re-add Schedule type
+type Schedule = Tables<'schedules'> 
 
-// Directly use StackScreenProps for component props
-// No need for a separate interface GoalDetailScreenProps {}
 
 export const GoalDetailScreen: React.FC<StackScreenProps<RootStackParamList, 'GoalDetail'>> = ({ navigation, route }) => {
   const { goal } = route.params
   const { user } = useAuth()
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
-  const [tasks, setTasks] = useState<Schedule[]>([]) // Use Schedule type
+  const [tasks, setTasks] = useState<Schedule[]>([]) 
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [showAddTaskModal, setShowAddTaskModal] = useState(false)
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Schedule | null>(null)
   
-  // Add task form state
+
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskDescription, setNewTaskDescription] = useState('')
   const [newTaskDate, setNewTaskDate] = useState(new Date())

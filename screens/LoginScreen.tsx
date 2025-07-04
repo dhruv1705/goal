@@ -42,7 +42,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         Alert.alert('Error', error.message || 'Failed to send OTP.');
       } else if (data && data.otp) {
         Alert.alert('Success', 'OTP sent successfully!');
-        navigation.navigate('OtpVerification', { phoneNumber: phoneNumber }); // Removed otp: data.otp
+        navigation.navigate('OtpVerification', { phoneNumber: phoneNumber }); 
       } else {
         Alert.alert('Error', 'Failed to send OTP: Unexpected response from server.');
       }

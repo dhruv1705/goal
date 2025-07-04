@@ -45,12 +45,7 @@ const MainStack = () => (
     <Stack.Screen name="Profile" component={ProfileScreen} />
     <Stack.Screen name="Goals" component={GoalsScreen} />
     <Stack.Screen name="AddEditGoal" component={AddEditGoalScreen} />
-    <Stack.Screen 
-      name="GoalDetail" 
-      children={({ navigation, route }: StackScreenProps<RootStackParamList, 'GoalDetail'>) => (
-        <GoalDetailScreen navigation={navigation} route={route} />
-      )}
-    />
+    <Stack.Screen name="GoalDetail" component={GoalDetailScreen} />
     <Stack.Screen name="Feedback" component={FeedbackScreen} />
     <Stack.Screen 
       name="Onboarding" 
@@ -131,12 +126,7 @@ const AppContent = () => {
               <Stack.Screen name="Profile" component={ProfileScreen} />
               <Stack.Screen name="Goals" component={GoalsScreen} />
               <Stack.Screen name="AddEditGoal" component={AddEditGoalScreen} />
-              <Stack.Screen 
-                name="GoalDetail" 
-                children={({ navigation, route }: StackScreenProps<RootStackParamList, 'GoalDetail'>) => (
-                  <GoalDetailScreen navigation={navigation} route={route} />
-                )}
-              />
+              <Stack.Screen name="GoalDetail" component={GoalDetailScreen} />
               <Stack.Screen name="Feedback" component={FeedbackScreen} />
             </>
           ) : (
@@ -185,7 +175,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
   },
-  notificationDisplayContainer: { // New style for the notification display
+  notificationDisplayContainer: { 
     position: 'absolute',
     top: 50,
     left: 20,

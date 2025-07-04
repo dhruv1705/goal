@@ -21,6 +21,10 @@ import { goalParser, type ParsedGoal } from '../lib/goalParser'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import IMAGES from '../assets'
+import { Tables } from '../types/supabase'
+
+type ChatSession = Tables<'chat_sessions'>
+type ChatMessage = Tables<'chat_messages'>
 
 interface Message {
   id: string
@@ -50,10 +54,119 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
   const [parsedGoals, setParsedGoals] = useState<ParsedGoal[]>([])
   const [showGoalConfirmation, setShowGoalConfirmation] = useState(false)
   const [rateLimitStatus, setRateLimitStatus] = useState<{ dailyRemaining: number, hourlyRemaining: number } | null>(null)
+  
+  // Chat history state
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
+  const [showHistory, setShowHistory] = useState(false)
+  const [loadingHistory, setLoadingHistory] = useState(false)
 
   useEffect(() => {
     loadRateLimitStatus()
+    loadChatHistory()
   }, [])
+
+  const loadChatHistory = async () => {
+    if (!user) return
+    
+    try {
+      const { data: sessions, error } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(10)
+
+      if (error) throw error
+      setChatSessions(sessions || [])
+    } catch (error) {
+      console.error('Error loading chat history:', error)
+    }
+  }
+
+  const createNewSession = async (firstMessage: string): Promise<string> => {
+    if (!user) throw new Error('User not authenticated')
+
+    // Generate session title from first message (first 50 chars)
+    const title = firstMessage.length > 50 
+      ? firstMessage.substring(0, 47) + '...' 
+      : firstMessage
+
+    const { data: session, error } = await supabase
+      .from('chat_sessions')
+      .insert([{ 
+        user_id: user.id, 
+        title 
+      }])
+      .select()
+      .single()
+
+    if (error) throw error
+    return session.id
+  }
+
+  const saveMessageToHistory = async (sessionId: string, message: string, isUser: boolean) => {
+    if (!user) return
+
+    try {
+      await supabase
+        .from('chat_messages')
+        .insert([{
+          session_id: sessionId,
+          user_id: user.id,
+          message,
+          is_user: isUser
+        }])
+
+      // Update session timestamp
+      await supabase
+        .from('chat_sessions')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', sessionId)
+
+    } catch (error) {
+      console.error('Error saving message to history:', error)
+    }
+  }
+
+  const loadSessionMessages = async (sessionId: string) => {
+    try {
+      const { data: messages, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+
+      const sessionMessages: Message[] = messages.map(msg => ({
+        id: msg.id,
+        text: msg.message,
+        isUser: msg.is_user,
+        timestamp: new Date(msg.created_at)
+      }))
+
+      setMessages([
+        messages[0], // Keep the initial AI greeting
+        ...sessionMessages
+      ])
+      setCurrentSessionId(sessionId)
+      setShowHistory(false)
+    } catch (error) {
+      console.error('Error loading session messages:', error)
+    }
+  }
+
+  const startNewConversation = () => {
+    setMessages([{
+      id: '0',
+      text: "Hi! I'm your goal-setting assistant. I'll help you create actionable goals and tasks.\n\nWhich area of your life would you like to improve?\n• Physical Health\n• Mental Health\n• Finance\n• Social",
+      isUser: false,
+      timestamp: new Date()
+    }])
+    setCurrentSessionId(null)
+    setShowHistory(false)
+  }
 
   const loadRateLimitStatus = async () => {
     try {
@@ -98,11 +211,9 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
         createdGoalsCount++
 
         // Create tasks for this goal if any exist
-        console.log(`Debug: Goal "${goal.title}" (${goal.category}) has ${goal.tasks.length} tasks:`, goal.tasks)
         if (goal.tasks.length > 0) {
           // Generate smart defaults for tasks
           const taskDefaults = goalParser.generateTaskDefaults(goal.tasks, goal.category)
-          console.log(`Debug: Generated ${taskDefaults.length} task defaults for ${goal.category}:`, taskDefaults)
           
           // Prepare tasks for insertion
           const tasksToInsert = taskDefaults.map(taskDefault => ({
@@ -125,7 +236,6 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
           if (tasksError) {
             console.error('Error creating tasks:', tasksError)
           } else {
-            console.log(`Successfully created ${tasksData?.length || 0} tasks`)
             createdTasksCount += tasksData?.length || 0
           }
         }
@@ -222,6 +332,15 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
     setIsLoading(true)
 
     try {
+      // Create new session if this is the first message
+      let sessionId = currentSessionId
+      if (!sessionId) {
+        sessionId = await createNewSession(currentInput)
+        setCurrentSessionId(sessionId)
+      }
+
+      // Save user message to history
+      await saveMessageToHistory(sessionId, currentInput, true)
       // Convert messages to format expected by Claude
       const conversationHistory = messages.map(msg => ({
         role: msg.isUser ? 'user' as const : 'assistant' as const,
@@ -247,6 +366,9 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
       }
       
       setMessages(prev => [...prev, aiResponse])
+
+      // Save AI response to history
+      await saveMessageToHistory(sessionId, response.response, false)
 
       // If goals were found, show confirmation
       if (parseResult.hasGoals && parseResult.goals.length > 0) {
@@ -318,6 +440,15 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <View style={styles.headerContent}>
+          <TouchableOpacity 
+            style={styles.historyButton}
+            onPress={() => setShowHistory(!showHistory)}
+          >
+            <Text style={[styles.historyButtonText, { color: colors.primary }]}>
+              {showHistory ? 'Hide' : 'History'}
+            </Text>
+          </TouchableOpacity>
+          
           <View style={styles.headerText}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>
               AI Assistant
@@ -326,6 +457,16 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
               Let's help you achieve your goals
             </Text>
           </View>
+          
+          <TouchableOpacity 
+            style={styles.newChatButton}
+            onPress={startNewConversation}
+          >
+            <Text style={[styles.newChatButtonText, { color: colors.primary }]}>
+              New
+            </Text>
+          </TouchableOpacity>
+          
           {rateLimitStatus && (
             <View style={styles.rateLimitContainer}>
               <Text style={[styles.rateLimitText, { color: colors.text }]}>
@@ -338,6 +479,34 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
           )}
         </View>
       </View>
+
+      {/* Chat History */}
+      {showHistory && (
+        <View style={[styles.historyContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          <Text style={[styles.historyTitle, { color: colors.text }]}>Recent Conversations</Text>
+          <ScrollView style={styles.historyList}>
+            {chatSessions.map((session) => (
+              <TouchableOpacity
+                key={session.id}
+                style={[styles.historyItem, { borderBottomColor: colors.border }]}
+                onPress={() => loadSessionMessages(session.id)}
+              >
+                <Text style={[styles.historyItemTitle, { color: colors.text }]} numberOfLines={1}>
+                  {session.title}
+                </Text>
+                <Text style={[styles.historyItemDate, { color: colors.text }]}>
+                  {new Date(session.updated_at).toLocaleDateString()}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            {chatSessions.length === 0 && (
+              <Text style={[styles.historyEmpty, { color: colors.text }]}>
+                No previous conversations
+              </Text>
+            )}
+          </ScrollView>
+        </View>
+      )}
 
       <KeyboardAvoidingView 
         style={[styles.flex, { paddingBottom: 80 }]} 
@@ -724,5 +893,59 @@ const styles = StyleSheet.create({
     color: '#7C3AED',
     marginTop: 4,
     fontWeight: '600',
+  },
+  historyButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  historyButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  newChatButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  newChatButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  historyContainer: {
+    maxHeight: 200,
+    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  historyTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  historyList: {
+    maxHeight: 150,
+  },
+  historyItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderBottomWidth: 0.5,
+    marginBottom: 4,
+  },
+  historyItemTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  historyItemDate: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  historyEmpty: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    opacity: 0.6,
+    textAlign: 'center',
+    paddingVertical: 20,
   },
 })

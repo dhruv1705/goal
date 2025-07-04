@@ -80,14 +80,13 @@ class GoalParser {
         tasksMatch = goalBlock.match(pattern)
         if (tasksMatch) {
           tasksText = tasksMatch[1].split(/\n\n.*Does this/)[0].trim()
-          console.log(`Debug: Goal "${title}" - Found tasks with pattern:`, pattern.source)
+          // Found tasks with this pattern
           break
         }
       }
       
       // If no explicit task section, look for bullet points anywhere in the goal block
       if (!tasksMatch && (goalBlock.includes('-') || goalBlock.includes('•') || goalBlock.includes('*'))) {
-        console.log(`Debug: Goal "${title}" - No task section found, scanning for bullet points`)
         // Extract lines that look like tasks (start with -, •, *, or numbers)
         const lines = goalBlock.split('\n')
         const taskLines = lines.filter(line => {
@@ -95,22 +94,13 @@ class GoalParser {
           return trimmed.match(/^[-•*]\s+.+/) || trimmed.match(/^\d+\.\s+.+/)
         })
         tasksText = taskLines.join('\n')
-        console.log(`Debug: Goal "${title}" - Found ${taskLines.length} task-like lines:`, taskLines)
       }
-      
-      console.log(`Debug: Goal "${title}" - Goal block:`, goalBlock)
-      console.log(`Debug: Goal "${title}" - Tasks regex matched:`, !!tasksMatch)
-      console.log(`Debug: Goal "${title}" - Raw tasks text:`, tasksText)
 
       // Parse category
       const category = this.parseCategory(categoryText)
-      console.log(`Debug: Goal "${title}" - Category text: "${categoryText}" -> Parsed as: "${category}"`)
 
       // Parse tasks from the goal block
       const tasks = this.parseTasks(tasksText)
-      if (tasks.length === 0 && tasksText.trim()) {
-        console.log(`Debug: No tasks parsed for "${title}" despite having tasks text:`, tasksText)
-      }
 
       const goal: ParsedGoal = {
         title,

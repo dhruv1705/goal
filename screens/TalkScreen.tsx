@@ -112,6 +112,10 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
       console.error('Error creating session:', error)
       throw error
     }
+
+    if (!session) {
+      throw new Error('Failed to create session: session is null or undefined')
+    }
     
     await loadChatHistory() // Refresh history immediately
     return session.id

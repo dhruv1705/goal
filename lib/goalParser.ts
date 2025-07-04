@@ -332,24 +332,3 @@ class GoalParser {
 }
 
 export const goalParser = new GoalParser()
-
-// Test function to debug parsing
-export const testGoalParsing = (response: string) => {
-  console.log('🧪 Testing goal parsing...')
-  console.log('Input:', response)
-  
-  const result = goalParser.parseAIResponse(response)
-  console.log('Result:', result)
-  
-  result.goals.forEach((goal, index) => {
-    console.log(`Goal ${index + 1}:`, {
-      title: goal.title,
-      description: goal.description,
-      category: goal.category,
-      tasks: goal.tasks,
-      taskCount: goal.tasks.length
-    })
-  })
-  
-  return result
-}

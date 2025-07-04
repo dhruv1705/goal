@@ -101,17 +101,23 @@ class GoalParser {
   private parseCategory(categoryText: string): ParsedGoal['category'] {
     const normalizedCategory = categoryText.toLowerCase().trim()
     
-    if (normalizedCategory.includes('physical') || normalizedCategory.includes('health') || normalizedCategory.includes('fitness')) {
-      return 'Physical Health'
-    }
+    // Check more specific categories first to avoid overlap
     if (normalizedCategory.includes('mental') || normalizedCategory.includes('mind') || normalizedCategory.includes('stress')) {
       return 'Mental Health'
+    }
+    if (normalizedCategory.includes('physical') || normalizedCategory.includes('fitness') || normalizedCategory.includes('exercise')) {
+      return 'Physical Health'
     }
     if (normalizedCategory.includes('finance') || normalizedCategory.includes('money') || normalizedCategory.includes('budget')) {
       return 'Finance'
     }
     if (normalizedCategory.includes('social') || normalizedCategory.includes('relationship') || normalizedCategory.includes('network')) {
       return 'Social'
+    }
+    
+    // Generic 'health' without specific qualifier defaults to Physical Health
+    if (normalizedCategory.includes('health')) {
+      return 'Physical Health'
     }
     
     return 'Physical Health' // Default fallback

@@ -99,8 +99,12 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
 
         // Create tasks for this goal if any exist
         if (goal.tasks.length > 0) {
+          console.log('🎯 AI Task Creation Debug - Goal:', goal.title)
+          console.log('📋 Tasks to create:', goal.tasks)
+          
           // Generate smart defaults for tasks
           const taskDefaults = goalParser.generateTaskDefaults(goal.tasks, goal.category)
+          console.log('⏰ Generated task defaults:', taskDefaults)
           
           // Prepare tasks for insertion
           const tasksToInsert = taskDefaults.map(taskDefault => ({
@@ -114,6 +118,8 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
             completed: false
           }))
 
+          console.log('💾 Tasks prepared for database insertion:', tasksToInsert)
+
           // Insert tasks
           const { data: tasksData, error: tasksError } = await supabase
             .from('schedules')
@@ -121,10 +127,15 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
             .select()
 
           if (tasksError) {
-            console.error('Error creating tasks:', tasksError)
+            console.error('❌ Error creating tasks:', tasksError)
+            console.error('❌ Failed task data:', tasksToInsert)
           } else {
+            console.log('✅ Tasks created successfully:', tasksData)
+            console.log('✅ Number of tasks created:', tasksData?.length || 0)
             createdTasksCount += tasksData?.length || 0
           }
+        } else {
+          console.log('⚠️ No tasks found in goal:', goal.title)
         }
       }
 

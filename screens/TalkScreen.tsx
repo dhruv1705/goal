@@ -12,6 +12,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '@react-navigation/native'
@@ -19,6 +20,7 @@ import { claudeService, RateLimitError } from '../lib/claude'
 import { goalParser, type ParsedGoal } from '../lib/goalParser'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import IMAGES from '../assets'
 
 interface Message {
   id: string
@@ -335,7 +337,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
       </View>
 
       <KeyboardAvoidingView 
-        style={styles.flex} 
+        style={[styles.flex, { paddingBottom: 80 }]} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
 
@@ -434,6 +436,30 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Bottom Navigation */}
+      <View style={[styles.bottomNav, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(8, insets.bottom) }]}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
+          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
+          <Text style={[styles.navLabel, { color: colors.text }]}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
+          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
+          <Text style={[styles.navLabel, { color: colors.text }]}>Categories</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
+          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
+          <Text style={[styles.navLabel, { color: colors.text }]}>Goals</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
+          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
+          <Text style={[styles.navLabel, { color: colors.text }]}>Schedule</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
+          <Image source={IMAGES.TALK} style={styles.navIcon} resizeMode="contain" tintColor={colors.primary}/>
+          <Text style={[styles.navLabelActive, { color: colors.primary }]}>Talk</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   )
 }
@@ -649,5 +675,51 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     paddingLeft: 4,
     marginTop: 2,
+  },
+  bottomNav: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    borderTopWidth: 0.5,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 12,
+    paddingHorizontal: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  navItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  navItemActive: {
+    // Active state styling handled via tintColor and text color
+  },
+  navIcon: {
+    width: 24,
+    height: 24,
+    marginBottom: 4,
+    opacity: 0.6,
+  },
+  navLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  navLabelActive: {
+    fontSize: 12,
+    color: '#7C3AED',
+    marginTop: 4,
+    fontWeight: '600',
   },
 })

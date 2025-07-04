@@ -138,8 +138,8 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
         updated_at: new Date().toISOString(),
       }
 
-      // Temporarily disable recurring functionality until migration is applied
-      const useRecurring = false; // Set to true after applying migration
+      // Enable recurring functionality now that migration is applied
+      const useRecurring = true;
 
       // Only add recurring fields if the database supports them
       if (isRecurring && useRecurring) {
@@ -673,8 +673,8 @@ export const GoalDetailScreen: React.FC<GoalDetailScreenProps> = ({ navigation, 
               </View>
             </View>
 
-            {/* Temporarily hide recurring task options until migration is applied */}
-            {false && (
+            {/* Recurring task options now enabled */}
+            {true && (
               <View style={styles.modalSection}>
                 <Text style={styles.modalLabel}>Recurring Task</Text>
                 <TouchableOpacity

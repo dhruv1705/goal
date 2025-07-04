@@ -245,7 +245,10 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
       })
       
       // Parse the AI response for goals
+      console.log('🤖 Raw AI Response:', response.response)
+      console.log('🤖 Response length:', response.response.length)
       const parseResult = goalParser.parseAIResponse(response.response)
+      console.log('📊 Parse Result:', JSON.stringify(parseResult, null, 2))
       
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
@@ -258,8 +261,11 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({ navigation }) => {
 
       // If goals were found, show confirmation
       if (parseResult.hasGoals && parseResult.goals.length > 0) {
+        console.log('✅ Goals found, showing confirmation dialog')
         setParsedGoals(parseResult.goals)
         setShowGoalConfirmation(true)
+      } else {
+        console.log('⚠️ No goals found in AI response or parsing failed')
       }
     } catch (error) {
       console.error('Error getting AI response:', error)

@@ -14,6 +14,26 @@ COMMENT ON COLUMN public.schedules.recurrence_pattern IS 'Type of recurrence pat
 -- Create index for performance
 CREATE INDEX IF NOT EXISTS idx_schedules_recurrence_pattern ON public.schedules(recurrence_pattern);
 
+-- Create a trigger function to populate parent_task_id for recurring tasks
+CREATE OR REPLACE FUNCTION set_parent_task_id()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- If this is a recurring task and parent_task_id is not already set
+    IF NEW.is_recurring AND NEW.parent_task_id IS NULL THEN
+        -- For the first task in a series, set parent_task_id to its own ID
+        -- For subsequent tasks, this will be handled by the application logic
+        NEW.parent_task_id := NEW.id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Add a trigger to invoke the function on INSERT
+CREATE TRIGGER trg_set_parent_task_id
+BEFORE INSERT ON public.schedules
+FOR EACH ROW
+EXECUTE FUNCTION set_parent_task_id();
+
 -- Verify the columns were added
 SELECT column_name, data_type, is_nullable, column_default 
 FROM information_schema.columns 

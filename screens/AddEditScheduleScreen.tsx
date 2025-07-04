@@ -241,10 +241,10 @@ export const AddEditScheduleScreen: React.FC<AddEditScheduleScreenProps> = ({
             recurrenceDayOfMonth = customMonthDay
           }
 
-          // Create tasks for each date
-          const tasksToInsert = recurringDates.map(scheduleDate => ({
+          // Create the first task (parent) to get its ID
+          const parentTaskData = {
             ...baseScheduleData,
-            schedule_date: scheduleDate,
+            schedule_date: recurringDates[0],
             is_recurring: true,
             recurrence_type: recurrenceType,
             recurrence_interval: recurrenceInterval,
@@ -252,13 +252,38 @@ export const AddEditScheduleScreen: React.FC<AddEditScheduleScreenProps> = ({
             recurrence_pattern: recurrencePattern,
             recurrence_days_of_week: recurrenceDaysOfWeek,
             recurrence_day_of_month: recurrenceDayOfMonth,
-          }))
+          }
 
-          const { error } = await supabase
+          // Insert parent task first
+          const { data: parentTask, error: parentError } = await supabase
             .from('schedules')
-            .insert(tasksToInsert)
+            .insert([parentTaskData])
+            .select()
+            .single()
 
-          if (error) throw error
+          if (parentError) throw parentError
+
+          // Create remaining tasks as children if there are more dates
+          if (recurringDates.length > 1) {
+            const childTasks = recurringDates.slice(1).map(scheduleDate => ({
+              ...baseScheduleData,
+              schedule_date: scheduleDate,
+              is_recurring: true,
+              recurrence_type: recurrenceType,
+              recurrence_interval: recurrenceInterval,
+              recurrence_end_date: recurrenceEndDate?.toISOString() || null,
+              recurrence_pattern: recurrencePattern,
+              recurrence_days_of_week: recurrenceDaysOfWeek,
+              recurrence_day_of_month: recurrenceDayOfMonth,
+              parent_task_id: parentTask.id, // Link to parent
+            }))
+
+            const { error: childrenError } = await supabase
+              .from('schedules')
+              .insert(childTasks)
+
+            if (childrenError) throw childrenError
+          }
           
           // Create detailed success message
           let successMessage = `Created ${recurringDates.length} recurring tasks!`

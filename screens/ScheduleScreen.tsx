@@ -477,6 +477,7 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
           ]}>
             {(item as any).goalCategory || 'General'}
             {item.is_recurring && ` • ${item.recurrence_type}`}
+            {item.parent_task_id && item.parent_task_id !== item.id && ' • Part of series'}
           </Text>
         </View>
       </View>

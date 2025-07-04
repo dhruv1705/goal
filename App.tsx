@@ -17,13 +17,14 @@ import { GoalDetailScreen } from './screens/GoalDetailScreen'
 import { FeedbackScreen } from './screens/FeedbackScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { CategoriesScreen } from './screens/CategoriesScreen'
-import OtpVerificationScreen from './screens/OtpVerificationScreen' // Import the new screen
+import OtpVerificationScreen from './screens/OtpVerificationScreen' 
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native'
 import DarkThemes from './theme/DarkThemes'
 import LightTheme from './theme/LightTheme'
 import {AppContext, AppContextProvider} from './theme/AppContext'
 import { RootStackParamList } from './types' 
 import { usePushNotifications } from './notification/notification'
+import { TalkScreen } from './screens/TalkScreen'
 const Stack = createStackNavigator()
 
 const AuthStack = () => (
@@ -128,6 +129,7 @@ const AppContent = () => {
               <Stack.Screen name="AddEditGoal" component={AddEditGoalScreen} />
               <Stack.Screen name="GoalDetail" component={GoalDetailScreen} />
               <Stack.Screen name="Feedback" component={FeedbackScreen} />
+              <Stack.Screen name="Talk" component={TalkScreen} />
             </>
           ) : (
             <>

@@ -1,8 +1,11 @@
 import { Tables } from './supabase'; 
+import { HabitTemplate, UserHabitProgress } from './habits';
+
 type Goal = Tables<'goals'>;
 
 export type RootStackParamList = {
   Home: undefined;
+  Learn: undefined;
   Login: undefined;
   SignUp: undefined;
   OtpVerification: { phoneNumber: string };
@@ -19,4 +22,10 @@ export type RootStackParamList = {
   Choice: undefined;
   Welcome: undefined;
   Talk: undefined;
+  Progress: undefined;
+  Journey: undefined;
+  HabitCompletion: {
+    habitTemplate: HabitTemplate;
+    habitProgress: UserHabitProgress;
+  };
 }; 

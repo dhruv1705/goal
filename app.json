@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "com.dhruv2050.goaltrackerpro",
-      "googleServicesFile": "goal/android/app/src/google-services.json",
+      "googleServicesFile": "./android/app/google-services.json",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

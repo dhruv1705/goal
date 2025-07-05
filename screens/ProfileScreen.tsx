@@ -68,6 +68,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   const menuItems = [
     {
+      title: 'AI Coach',
+      iconType: 'ai_coach',
+      onPress: () => navigation.navigate('Talk'),
+      isHighlighted: true,
+    },
+    {
       title: 'Category Preferences',
       iconType: 'preferences',
       onPress: handleUpdatePreferences,
@@ -96,6 +102,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   const renderMenuIcon = (iconType: string) => {
     switch (iconType) {
+      case 'ai_coach':
+        return (
+          <View style={styles.menuIconContainer}>
+            <View style={styles.aiCoachIcon}>
+              <View style={styles.aiCoachBubble} />
+              <View style={styles.aiCoachDots}>
+                <View style={styles.aiCoachDot} />
+                <View style={styles.aiCoachDot} />
+                <View style={styles.aiCoachDot} />
+              </View>
+            </View>
+          </View>
+        )
       case 'preferences':
         return (
           <View style={styles.menuIconContainer}>
@@ -205,14 +224,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           {menuItems.map((item, index) => (
             <TouchableOpacity
               key={index}
-              style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+              style={[
+                styles.menuItem, 
+                { 
+                  backgroundColor: item.isHighlighted ? '#7C3AED' : colors.card, 
+                  borderColor: item.isHighlighted ? '#7C3AED' : colors.border 
+                }
+              ]}
               onPress={item.onPress}
             >
               <View style={styles.menuItemLeft}>
                 {renderMenuIcon(item.iconType)}
-                <Text style={[styles.menuTitle, { color: colors.text }]}>{item.title}</Text>
+                <Text style={[styles.menuTitle, { color: item.isHighlighted ? 'white' : colors.text }]}>{item.title}</Text>
               </View>
-              <Text style={[styles.menuArrow, { color: colors.text }]}>›</Text>
+              <Text style={[styles.menuArrow, { color: item.isHighlighted ? 'white' : colors.text }]}>›</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -230,43 +255,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         </View>
       </ScrollView>
 
-      {/* Bottom Navigation */}
-      <View style={[styles.bottomNav, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(8, insets.bottom) }]}>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
-          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
-          <Text style={[styles.navLabel, { color: colors.text }]}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
-          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
-          <Text style={[styles.navLabel, { color: colors.text }]}>Categories</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
-          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
-          <Text style={[styles.navLabel, { color: colors.text }]}>Goals</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Schedule')}>
-          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text} />
-          <Text style={[styles.navLabel, { color: colors.text }]}>Schedule</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-          <Image source={IMAGES.ACCOUNT} style={styles.navIcon} resizeMode="contain" tintColor={colors.primary} />
-          <Text style={[styles.navLabelActive, { color: colors.primary }]}>Profile</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  navIcon: {
-    width: 24,
-    height: 24,
-    marginBottom: 4,
-    opacity: 0.6,
-  },
-  navIconActive: {
-    opacity: 1,
-  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -392,7 +385,7 @@ const styles = StyleSheet.create({
   versionSection: {
     alignItems: 'center',
     paddingVertical: 20,
-    paddingBottom: 80, // Reduced padding for bottom nav
+    paddingBottom: 40,
   },
   versionText: {
     fontSize: 14,
@@ -407,6 +400,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+  },
+  
+  // AI Coach Icon - Chat Bubble with dots
+  aiCoachIcon: {
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  aiCoachBubble: {
+    width: 16,
+    height: 12,
+    borderWidth: 2,
+    borderColor: 'white',
+    borderRadius: 8,
+    position: 'absolute',
+  },
+  aiCoachDots: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: 8,
+    position: 'absolute',
+  },
+  aiCoachDot: {
+    width: 2,
+    height: 2,
+    backgroundColor: 'white',
+    borderRadius: 1,
   },
   
   // Settings Icon - Gear
@@ -526,235 +548,6 @@ const styles = StyleSheet.create({
     borderRadius: 1,
     position: 'absolute',
     bottom: 4,
-  },
-  
-  // Bottom Navigation Styles
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    backgroundColor: 'white',
-    borderTopWidth: 0.5,
-    borderTopColor: '#E5E7EB',
-    paddingTop: 12,
-    paddingHorizontal: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  navItemActive: {},
-  navIconContainer: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  navLabel: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  navLabelActive: {
-    fontSize: 12,
-    color: '#7C3AED',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  
-  // Navigation Icon Styles
-  // Home Icon
-  homeIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  homeIconRoof: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 9,
-    borderRightWidth: 9,
-    borderBottomWidth: 8,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: '#9CA3AF',
-    position: 'absolute',
-    top: 1,
-  },
-  homeIconBody: {
-    width: 16,
-    height: 12,
-    borderWidth: 1.5,
-    borderColor: '#9CA3AF',
-    borderTopWidth: 0,
-    position: 'absolute',
-    top: 8,
-  },
-  
-  // Goals Icon - Flag
-  goalsIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    paddingTop: 3,
-    position: 'relative',
-  },
-  goalsFlagPole: {
-    width: 1.5,
-    height: 18,
-    backgroundColor: '#9CA3AF',
-    position: 'absolute',
-    left: 4,
-  },
-  goalsFlagBody: {
-    width: 12,
-    height: 8,
-    borderWidth: 1.5,
-    borderColor: '#9CA3AF',
-    borderLeftWidth: 0,
-    backgroundColor: 'transparent',
-    position: 'absolute',
-    left: 5.5,
-    top: 3,
-  },
-  
-  // Schedule Icon - Calendar
-  scheduleIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  scheduleCalendarBody: {
-    width: 18,
-    height: 16,
-    backgroundColor: '#9CA3AF',
-    borderRadius: 2,
-    position: 'absolute',
-    top: 4,
-  },
-  scheduleCalendarTop: {
-    width: 20,
-    height: 3,
-    backgroundColor: '#9CA3AF',
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-    position: 'absolute',
-    top: 1,
-  },
-  scheduleGridContainer: {
-    width: 14,
-    height: 10,
-    position: 'absolute',
-    top: 7,
-    justifyContent: 'space-between',
-  },
-  scheduleGridRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    height: 3,
-  },
-  scheduleGridDot: {
-    width: 2.5,
-    height: 2.5,
-    backgroundColor: 'white',
-    borderRadius: 0.5,
-  },
-  
-  // Feedback Icon - Speech Bubble
-  feedbackIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  feedbackBubble: {
-    width: 18,
-    height: 14,
-    borderWidth: 1.5,
-    borderColor: '#9CA3AF',
-    borderRadius: 8,
-    position: 'absolute',
-    top: 2,
-  },
-  feedbackTail: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 3,
-    borderRightWidth: 3,
-    borderTopWidth: 4,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: '#9CA3AF',
-    position: 'absolute',
-    bottom: 5,
-    left: 6,
-  },
-  
-  // Profile Icon - Simple User (Active)
-  profileIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  profileHead: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#7C3AED',
-    position: 'absolute',
-    top: 3,
-  },
-  profileBody: {
-    width: 16,
-    height: 10,
-    backgroundColor: '#7C3AED',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    position: 'absolute',
-    bottom: 3,
-  },
-
-  // Categories Icon - 2x2 Grid
-  categoriesIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  categoriesGrid: {
-    width: 16,
-    height: 16,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  categoriesSquare: {
-    width: 6,
-    height: 6,
-    borderRadius: 1,
-    marginBottom: 2,
   },
 
   // Preferences icon styles

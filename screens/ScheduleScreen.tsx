@@ -44,9 +44,29 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
   const [showActionSheet, setShowActionSheet] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Schedule | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string | null>(route?.params?.categoryFilter || null)
+  const [userXP, setUserXP] = useState<{ total_xp: number; current_level: number; xp_to_next_level: number; current_streak: number } | null>(null)
   const { colors } = useTheme()
 
   const today = new Date().toISOString().split('T')[0]
+
+  const fetchUserXP = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_xp_progress')
+        .select('total_xp, current_level, xp_to_next_level, current_streak')
+        .eq('user_id', user?.id)
+        .single()
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('Error fetching user XP:', error)
+        return
+      }
+
+      setUserXP(data || { total_xp: 0, current_level: 1, xp_to_next_level: 100, current_streak: 0 })
+    } catch (error) {
+      console.error('Error in fetchUserXP:', error)
+    }
+  }
 
   useEffect(() => {
     if (activeTab === 'Day') {
@@ -56,6 +76,7 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
     } else if (activeTab === 'Month') {
       fetchMonthlySchedules()
     }
+    fetchUserXP()
   }, [activeTab, currentDate, selectedWeekDay, selectedMonthDay, categoryFilter])
 
   useEffect(() => {
@@ -73,6 +94,150 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
   }, [route?.params?.categoryFilter])
 
   const fetchSchedules = async () => {
+    try {
+      // First try to fetch habits from the new habit system
+      const { data: habitData, error: habitError } = await supabase
+        .from('user_habit_progress')
+        .select(`
+          id,
+          status,
+          completed_count,
+          current_streak,
+          last_completed_at,
+          habit_template_id
+        `)
+        .eq('user_id', user?.id)
+        .in('status', ['available', 'in_progress'])
+
+      if (habitError) {
+        console.error('Error fetching habit progress:', habitError)
+        console.log('Falling back to legacy schedules system...')
+        return await fetchLegacySchedules()
+      }
+
+      // If we have habit progress data, fetch the habit templates separately
+      if (habitData && habitData.length > 0) {
+        const habitTemplateIds = habitData.map(h => h.habit_template_id)
+        
+        const { data: habitTemplates, error: templatesError } = await supabase
+          .from('habit_templates')
+          .select(`
+            id,
+            title,
+            description,
+            estimated_duration,
+            xp_reward,
+            level,
+            habit_type,
+            goal_template_id
+          `)
+          .in('id', habitTemplateIds)
+
+        if (templatesError) {
+          console.error('Error fetching habit templates:', templatesError)
+          return await fetchLegacySchedules()
+        }
+
+        // Get unique goal template IDs
+        const goalTemplateIds = [...new Set(habitTemplates?.map(ht => ht.goal_template_id) || [])]
+        
+        const { data: goalTemplates, error: goalError } = await supabase
+          .from('goal_templates')
+          .select(`
+            id,
+            title,
+            skill_id
+          `)
+          .in('id', goalTemplateIds)
+
+        if (goalError) {
+          console.error('Error fetching goal templates:', goalError)
+        }
+
+        // Get skill data
+        const skillIds = [...new Set(goalTemplates?.map(gt => gt.skill_id) || [])]
+        
+        const { data: skills, error: skillsError } = await supabase
+          .from('skills')
+          .select(`
+            id,
+            name,
+            color
+          `)
+          .in('id', skillIds)
+
+        if (skillsError) {
+          console.error('Error fetching skills:', skillsError)
+        }
+
+        // Combine all the data
+        const combinedHabitData = habitData.map(habit => {
+          const template = habitTemplates?.find(t => t.id === habit.habit_template_id)
+          const goal = goalTemplates?.find(g => g.id === template?.goal_template_id)
+          const skill = skills?.find(s => s.id === goal?.skill_id)
+
+          return {
+            ...habit,
+            habit_templates: {
+              ...template,
+              goal_templates: {
+                ...goal,
+                skills: skill
+              }
+            }
+          }
+        })
+
+        // Now process the combined data
+        const transformedHabits = combinedHabitData.map((habit, index) => {
+          const targetDate = activeTab === 'Day' ? currentDate.toISOString().split('T')[0] : selectedWeekDay.toISOString().split('T')[0]
+          const todayStr = new Date().toISOString().split('T')[0]
+          const isCompleted = habit.last_completed_at && habit.last_completed_at.includes(todayStr)
+        
+        return {
+          id: habit.id,
+          title: habit.habit_templates?.title || 'Habit',
+          description: habit.habit_templates?.description || '',
+          schedule_date: targetDate,
+          schedule_time: index < 3 ? ['09:00', '14:00', '18:00'][index] : '12:00', // Distribute throughout day
+          completed: isCompleted || false,
+          priority: 'medium',
+          goal_id: habit.habit_templates?.goal_templates?.id,
+          goalCategory: habit.habit_templates?.goal_templates?.skills?.name,
+          // Habit-specific fields
+          habit_progress_id: habit.id,
+          xp_reward: habit.habit_templates?.xp_reward || 10,
+          current_streak: habit.current_streak,
+          habit_type: habit.habit_templates?.habit_type,
+          level: habit.habit_templates?.level,
+          estimated_duration: habit.habit_templates?.estimated_duration,
+          skill_color: habit.habit_templates?.goal_templates?.skills?.color
+        }
+      })
+
+      // Apply category filter if set
+      const filteredHabits = categoryFilter 
+        ? transformedHabits.filter(habit => 
+            habit.goalCategory === categoryFilter
+          )
+        : transformedHabits
+
+      setSchedules(filteredHabits)
+      } else {
+        // No habit data available, fall back to legacy schedules
+        console.log('No habit data found, falling back to legacy schedules...')
+        return await fetchLegacySchedules()
+      }
+    } catch (error: any) {
+      console.error('Error in fetchSchedules:', error)
+      Alert.alert('Error', 'Failed to fetch today\'s habits')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Fallback function for legacy schedules
+  const fetchLegacySchedules = async () => {
     try {
       const targetDate = activeTab === 'Day' ? currentDate.toISOString().split('T')[0] : selectedWeekDay.toISOString().split('T')[0]
       const { data, error } = await supabase
@@ -110,12 +275,103 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
       setSchedules(filteredSchedules)
     } catch (error: any) {
       Alert.alert('Error', 'Failed to fetch schedules')
+    }
+  }
+
+  const fetchWeeklySchedules = async () => {
+    try {
+      // For weekly view, try to fetch available habits but fall back to legacy if needed
+      const { data: habitData, error: habitError } = await supabase
+        .from('user_habit_progress')
+        .select(`
+          id,
+          status,
+          completed_count,
+          current_streak,
+          last_completed_at,
+          habit_templates (
+            id,
+            title,
+            description,
+            estimated_duration,
+            xp_reward,
+            level,
+            habit_type,
+            goal_templates (
+              title,
+              skills (
+                name,
+                color
+              )
+            )
+          )
+        `)
+        .eq('user_id', user?.id)
+        .in('status', ['available', 'in_progress'])
+
+      if (habitError) {
+        console.error('Error fetching weekly habits:', habitError)
+        console.log('Falling back to legacy weekly schedules...')
+        return await fetchLegacyWeeklySchedules()
+      }
+
+      // Check if we have habit data
+      if (!habitData || habitData.length === 0) {
+        console.log('No habit data found for weekly view, falling back to legacy schedules...')
+        return await fetchLegacyWeeklySchedules()
+      }
+
+      // For week view, create habits for each day of the week
+      const weekStart = getWeekStart(currentDate)
+      const weekDays = []
+      for (let i = 0; i < 7; i++) {
+        const day = new Date(weekStart)
+        day.setDate(weekStart.getDate() + i)
+        weekDays.push(day)
+      }
+
+      const allWeekHabits = weekDays.flatMap((day, dayIndex) => {
+        return (habitData || []).map((habit, habitIndex) => {
+          const dayStr = day.toISOString().split('T')[0]
+          const isCompleted = habit.last_completed_at && habit.last_completed_at.includes(dayStr)
+          
+          return {
+            id: `${habit.id}-${dayStr}`,
+            title: habit.habit_templates?.title || 'Habit',
+            description: habit.habit_templates?.description || '',
+            schedule_date: dayStr,
+            schedule_time: habitIndex < 3 ? ['09:00', '14:00', '18:00'][habitIndex] : '12:00',
+            completed: isCompleted || false,
+            priority: 'medium',
+            goal_id: habit.habit_templates?.goal_templates?.id,
+            goalCategory: habit.habit_templates?.goal_templates?.skills?.name,
+            // Habit-specific fields
+            habit_progress_id: habit.id,
+            xp_reward: habit.habit_templates?.xp_reward || 10,
+            current_streak: habit.current_streak,
+            habit_type: habit.habit_templates?.habit_type,
+            level: habit.habit_templates?.level,
+            estimated_duration: habit.habit_templates?.estimated_duration,
+            skill_color: habit.habit_templates?.goal_templates?.skills?.color
+          }
+        })
+      })
+
+      setWeeklySchedules(allWeekHabits)
+      
+      // Filter schedules for selected day
+      const selectedDateStr = selectedWeekDay.toISOString().split('T')[0]
+      const daySchedules = allWeekHabits.filter(s => s.schedule_date === selectedDateStr)
+      setSchedules(daySchedules)
+    } catch (error: any) {
+      Alert.alert('Error', 'Failed to fetch weekly habits')
     } finally {
       setLoading(false)
     }
   }
 
-  const fetchWeeklySchedules = async () => {
+  // Legacy weekly schedules fallback
+  const fetchLegacyWeeklySchedules = async () => {
     try {
       const weekStart = getWeekStart(currentDate)
       const weekEnd = getWeekEnd(currentDate)
@@ -131,39 +387,14 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
 
       if (error) throw error
 
-      // Fetch goal categories separately for tasks that have goal_id
-      const schedulesWithCategories = await Promise.all(
-        (data || []).map(async (schedule) => {
-          if (schedule.goal_id) {
-            const { data: goalData } = await supabase
-              .from('goals')
-              .select('category')
-              .eq('id', schedule.goal_id)
-              .single()
-            
-            return { ...schedule, goalCategory: goalData?.category }
-          }
-          return { ...schedule, goalCategory: null }
-        })
-      )
-
-      // Apply category filter if set
-      const filteredWeeklySchedules = categoryFilter 
-        ? schedulesWithCategories.filter(schedule => 
-            schedule.goalCategory === categoryFilter
-          )
-        : schedulesWithCategories
-
-      setWeeklySchedules(filteredWeeklySchedules)
+      setWeeklySchedules(data || [])
       
       // Filter schedules for selected day
       const selectedDateStr = selectedWeekDay.toISOString().split('T')[0]
-      const daySchedules = filteredWeeklySchedules.filter(s => s.schedule_date === selectedDateStr)
+      const daySchedules = (data || []).filter(s => s.schedule_date === selectedDateStr)
       setSchedules(daySchedules)
     } catch (error: any) {
       Alert.alert('Error', 'Failed to fetch weekly schedules')
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -233,32 +464,115 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
 
   const toggleTaskCompletion = async (task: Schedule) => {
     try {
-      const { error } = await supabase
-        .from('schedules')
-        .update({ 
-          completed: !task.completed,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', task.id)
+      const taskWithHabit = task as any // Cast to access habit-specific fields
+      
+      // Check if this is a habit (has habit_progress_id) or legacy schedule
+      if (taskWithHabit.habit_progress_id) {
+        // Handle habit completion
+        if (!task.completed) {
+          // Complete the habit - create habit completion record
+          const completionData = {
+            user_id: user?.id,
+            habit_template_id: taskWithHabit.habit_templates?.id,
+            user_habit_progress_id: taskWithHabit.habit_progress_id,
+            completion_date: new Date().toISOString().split('T')[0],
+            xp_earned: taskWithHabit.xp_reward || 10,
+            rating: 3, // Default to "great"
+            completion_time: taskWithHabit.estimated_duration
+          }
 
-      if (error) throw error
+          const { error: completionError } = await supabase
+            .from('habit_completions')
+            .insert(completionData)
 
-      // Update local state
-      if (activeTab === 'Day') {
-        setSchedules(schedules.map(s => 
-          s.id === task.id ? { ...s, completed: !s.completed } : s
-        ))
-      } else if (activeTab === 'Week') {
-        setWeeklySchedules(weeklySchedules.map(s => 
-          s.id === task.id ? { ...s, completed: !s.completed } : s
-        ))
-        // Also update the day schedules if it's visible
-        setSchedules(schedules.map(s => 
-          s.id === task.id ? { ...s, completed: !s.completed } : s
-        ))
+          if (completionError) throw completionError
+
+          // Update habit progress
+          const { error: progressError } = await supabase
+            .from('user_habit_progress')
+            .update({
+              completed_count: (taskWithHabit.completed_count || 0) + 1,
+              current_streak: (taskWithHabit.current_streak || 0) + 1,
+              best_streak: Math.max((taskWithHabit.best_streak || 0), (taskWithHabit.current_streak || 0) + 1),
+              total_xp_earned: (taskWithHabit.total_xp_earned || 0) + (taskWithHabit.xp_reward || 10),
+              last_completed_at: new Date().toISOString(),
+              status: 'in_progress'
+            })
+            .eq('id', taskWithHabit.habit_progress_id)
+
+          if (progressError) throw progressError
+
+          // Update user XP
+          const { error: xpError } = await supabase.rpc('add_user_xp', {
+            user_id: user?.id,
+            xp_amount: taskWithHabit.xp_reward || 10,
+            transaction_type: 'habit_completion'
+          })
+
+          if (xpError) {
+            console.warn('Failed to update XP:', xpError)
+            // Don't throw - XP update is not critical
+          }
+
+          // Show completion feedback
+          Alert.alert(
+            '🎉 Habit Completed!',
+            `Great job! You earned ${taskWithHabit.xp_reward || 10} XP and extended your streak!`,
+            [{ text: 'Awesome!' }]
+          )
+        } else {
+          // Uncomplete the habit - remove today's completion
+          const todayStr = new Date().toISOString().split('T')[0]
+          const { error } = await supabase
+            .from('habit_completions')
+            .delete()
+            .eq('user_habit_progress_id', taskWithHabit.habit_progress_id)
+            .eq('completion_date', todayStr)
+
+          if (error) throw error
+
+          // Note: For simplicity, we don't recalculate streaks/XP when uncompleting
+          // In a production app, you might want to implement this
+        }
+
+        // Refresh the data to show updated status
+        if (activeTab === 'Day') {
+          await fetchSchedules()
+        } else if (activeTab === 'Week') {
+          await fetchWeeklySchedules()
+        }
+        
+        // Refresh XP display
+        await fetchUserXP()
+      } else {
+        // Handle legacy schedule completion
+        const { error } = await supabase
+          .from('schedules')
+          .update({ 
+            completed: !task.completed,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', task.id)
+
+        if (error) throw error
+
+        // Update local state for legacy schedules
+        if (activeTab === 'Day') {
+          setSchedules(schedules.map(s => 
+            s.id === task.id ? { ...s, completed: !s.completed } : s
+          ))
+        } else if (activeTab === 'Week') {
+          setWeeklySchedules(weeklySchedules.map(s => 
+            s.id === task.id ? { ...s, completed: !s.completed } : s
+          ))
+          setSchedules(schedules.map(s => 
+            s.id === task.id ? { ...s, completed: !s.completed } : s
+          ))
+        }
       }
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to update task completion')
+      console.error('Error toggling task completion:', error)
+      Alert.alert('Error', 'Failed to update completion status')
     }
   }
 
@@ -454,7 +768,10 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
             {formatTime(item.schedule_time)}
           </Text>
         </View>
-        <View style={styles.taskAccent} />
+        <View style={[
+          styles.taskAccent, 
+          { backgroundColor: (item as any).skill_color || '#10B981' }
+        ]} />
         <View style={styles.taskDetails}>
           <View style={styles.taskTitleRow}>
             <Text style={[
@@ -476,6 +793,9 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
             item.completed && styles.taskCategoryCompleted
           ]}>
             {(item as any).goalCategory || 'General'}
+            {(item as any).xp_reward && ` • +${(item as any).xp_reward} XP`}
+            {(item as any).level && ` • Level ${(item as any).level}`}
+            {(item as any).current_streak > 0 && ` • 🔥 ${(item as any).current_streak}`}
             {item.is_recurring && ` • ${item.recurrence_type}`}
             {item.parent_task_id && item.parent_task_id !== item.id && ' • Part of series'}
           </Text>
@@ -492,6 +812,39 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
       <View style={[styles.header, { backgroundColor: colors.background }]}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Schedule</Text>
       </View>
+
+      {/* User XP Display */}
+      {userXP && (
+        <View style={[styles.xpContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          <View style={styles.xpRow}>
+            <View style={styles.levelSection}>
+              <Text style={[styles.levelText, { color: colors.primary }]}>Level {userXP.current_level}</Text>
+              <View style={styles.xpProgressContainer}>
+                <View style={[styles.xpProgressBackground, { backgroundColor: colors.border }]}>
+                  <View 
+                    style={[
+                      styles.xpProgressFill, 
+                      { 
+                        backgroundColor: colors.primary,
+                        width: `${Math.max(0, 100 - (userXP.xp_to_next_level / (100) * 100))}%`
+                      }
+                    ]} 
+                  />
+                </View>
+                <Text style={[styles.xpText, { color: colors.text }]}>
+                  {userXP.total_xp} XP • {userXP.xp_to_next_level} to next level
+                </Text>
+              </View>
+            </View>
+            {userXP.current_streak > 0 && (
+              <View style={styles.streakSection}>
+                <Text style={[styles.streakText, { color: colors.text }]}>🔥 {userXP.current_streak}</Text>
+                <Text style={[styles.streakLabel, { color: colors.text }]}>day streak</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
 
       <ScrollView style={[styles.scrollContainer, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
         {/* Tab Navigation */}
@@ -805,29 +1158,6 @@ export const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ navigation, rout
         </TouchableOpacity>
       </Modal>
 
-      {/* Bottom Navigation */}
-      <View style={[styles.bottomNav, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(8, insets.bottom) }]}>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
-          <Image source={IMAGES.HOME} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
-          <Text style={[styles.navLabel, { color: colors.text }]}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Categories')}>
-          <Image source={IMAGES.CATEGORIES} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
-          <Text style={[styles.navLabel, { color: colors.text }]}>Categories</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Goals')}>
-          <Image source={IMAGES.GOALS} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
-          <Text style={[styles.navLabel, { color: colors.text }]}>Goals</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-          <Image source={IMAGES.SCHEDULES} style={styles.navIcon} resizeMode="contain" tintColor={colors.primary}/>
-          <Text style={[styles.navLabelActive, { color: colors.primary }]}>Schedule</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Talk')}>
-          <Image source={IMAGES.TALK} style={styles.navIcon} resizeMode="contain" tintColor={colors.text}/>
-          <Text style={[styles.navLabel, { color: colors.text }]}>Talk</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   )
 }
@@ -1047,211 +1377,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 24,
     fontWeight: 'bold',
-  },
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    backgroundColor: 'white',
-    borderTopWidth: 0.5,
-    borderTopColor: '#E5E7EB',
-    paddingTop: 12,
-    paddingHorizontal: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  navItemActive: {},
-  navIconContainer: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  navLabel: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  navLabelActive: {
-    fontSize: 12,
-    color: '#7C3AED',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  
-  // LifeTracker Style Icons
-  // Home Icon
-  homeIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  homeIconRoof: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 9,
-    borderRightWidth: 9,
-    borderBottomWidth: 8,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: '#9CA3AF',
-    position: 'absolute',
-    top: 1,
-  },
-  homeIconBody: {
-    width: 16,
-    height: 12,
-    borderWidth: 1.5,
-    borderColor: '#9CA3AF',
-    borderTopWidth: 0,
-    position: 'absolute',
-    top: 8,
-  },
-  
-  // Goals Icon - Flag
-  goalsIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    paddingTop: 3,
-    position: 'relative',
-  },
-  goalsFlagPole: {
-    width: 1.5,
-    height: 18,
-    backgroundColor: '#9CA3AF',
-    position: 'absolute',
-    left: 4,
-  },
-  goalsFlagBody: {
-    width: 12,
-    height: 8,
-    borderWidth: 1.5,
-    borderColor: '#9CA3AF',
-    borderLeftWidth: 0,
-    backgroundColor: 'transparent',
-    position: 'absolute',
-    left: 5.5,
-    top: 3,
-  },
-  
-  // Schedule Icon - Calendar (Active)
-  scheduleIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  scheduleCalendarBody: {
-    width: 18,
-    height: 16,
-    backgroundColor: '#7C3AED',
-    borderRadius: 2,
-    position: 'absolute',
-    top: 4,
-  },
-  scheduleCalendarTop: {
-    width: 20,
-    height: 3,
-    backgroundColor: '#7C3AED',
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-    position: 'absolute',
-    top: 1,
-  },
-  scheduleGridContainer: {
-    width: 14,
-    height: 10,
-    position: 'absolute',
-    top: 7,
-    justifyContent: 'space-between',
-  },
-  scheduleGridRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    height: 3,
-  },
-  scheduleGridDot: {
-    width: 2.5,
-    height: 2.5,
-    backgroundColor: 'white',
-    borderRadius: 0.5,
-  },
-  
-  // Feedback Icon - Speech Bubble
-  feedbackIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  feedbackBubble: {
-    width: 18,
-    height: 14,
-    borderWidth: 1.5,
-    borderColor: '#9CA3AF',
-    borderRadius: 8,
-    position: 'absolute',
-    top: 2,
-  },
-  feedbackTail: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 3,
-    borderRightWidth: 3,
-    borderTopWidth: 4,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: '#9CA3AF',
-    position: 'absolute',
-    bottom: 5,
-    left: 6,
-  },
-  
-  // Profile Icon - Simple User
-  profileIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  profileHead: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#9CA3AF',
-    position: 'absolute',
-    top: 3,
-  },
-  profileBody: {
-    width: 16,
-    height: 10,
-    backgroundColor: '#9CA3AF',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    position: 'absolute',
-    bottom: 3,
   },
   // Week View Styles
   weekNavigation: {
@@ -1478,5 +1603,53 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 1,
     marginBottom: 2,
+  },
+  
+  // XP Display Styles
+  xpContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  xpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  levelSection: {
+    flex: 1,
+  },
+  levelText: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  xpProgressContainer: {
+    flex: 1,
+  },
+  xpProgressBackground: {
+    height: 6,
+    borderRadius: 3,
+    marginBottom: 4,
+  },
+  xpProgressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  xpText: {
+    fontSize: 12,
+    opacity: 0.8,
+  },
+  streakSection: {
+    alignItems: 'center',
+    marginLeft: 16,
+  },
+  streakText: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  streakLabel: {
+    fontSize: 10,
+    opacity: 0.8,
   },
 })

@@ -292,65 +292,226 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
         timeCommitment
       })
 
-      // Create the primary goal in the database
-      const goalData = {
-        user_id: user.id,
-        title: selectedGoal?.title || 'My Primary Goal',
-        description: selectedGoal?.description || '',
-        category: selectedCategory?.name || 'Physical Health',
-        status: 'active'
+      // Map onboarding goal IDs to database goal template names
+      const goalIdMapping: { [key: string]: string } = {
+        'weight-loss': 'lose-weight',
+        'muscle-gain': 'build-muscle', 
+        'endurance': 'improve-cardio',
+        'flexibility': 'improve-cardio', // Use cardio as fallback for flexibility
+        'stress-relief': 'reduce-stress',
+        'mindfulness': 'build-mindfulness',
+        'sleep-improvement': 'improve-sleep',
+        'budgeting': 'budget-better',
+        'saving': 'save-money',
+        'investing': 'build-wealth',
+        'communication': 'improve-relationships',
+        'networking': 'network-better',
+        'confidence': 'build-confidence'
       }
 
-      console.log('Creating goal:', goalData)
-      const { data: createdGoal, error: goalError } = await supabase
-        .from('goals')
-        .insert(goalData)
-        .select()
+      const databaseGoalName = goalIdMapping[selectedGoal?.id || ''] || 'lose-weight' // Default fallback
+
+      // Check if habit system tables exist by attempting to query goal_templates
+      let { data: goalTemplates, error: goalTemplateError } = await supabase
+        .from('goal_templates')
+        .select('id, skill_id')
+        .eq('name', databaseGoalName)
         .single()
 
-      if (goalError) {
-        console.error('Error creating goal:', goalError)
-        throw goalError
+      if (goalTemplateError) {
+        console.error('Goal template error:', goalTemplateError)
+        
+        // If the table doesn't exist (relation does not exist), skip habit system setup
+        if (goalTemplateError.code === '42P01') {
+          console.log('Habit system tables do not exist, skipping habit system setup...')
+          
+          // Just complete the onboarding without creating habit system entries
+          await updatePreferences({
+            onboardingCompleted: true,
+            selectedCategory: selectedCategory?.name,
+            selectedGoal: selectedGoal?.title,
+            timeCommitment,
+            motivationContext,
+            demoXP: demoXP || 0
+          })
+          
+          completeOnboardingLocally()
+          console.log('✅ Onboarding completed successfully (without habit system)')
+          
+          setTimeout(() => {
+            Alert.alert(
+              'Welcome! 🎉',
+              `Great job! You've completed the onboarding and earned ${demoXP} XP. Let's start building your ${selectedGoal?.title} habit!`,
+              [{ text: 'Let\'s Go!' }]
+            )
+          }, 500)
+          
+          onComplete()
+          return
+        }
+        
+        console.log('Attempting fallback to lose-weight goal...')
+        
+        // Fallback: try to get the lose-weight goal as default
+        const { data: fallbackGoal, error: fallbackError } = await supabase
+          .from('goal_templates')
+          .select('id, skill_id')
+          .eq('name', 'lose-weight')
+          .single()
+          
+        if (fallbackError || !fallbackGoal) {
+          console.log('No goal templates found, completing onboarding without habit system...')
+          
+          // Complete without habit system
+          await updatePreferences({
+            onboardingCompleted: true,
+            selectedCategory: selectedCategory?.name,
+            selectedGoal: selectedGoal?.title,
+            timeCommitment,
+            motivationContext,
+            demoXP: demoXP || 0
+          })
+          
+          completeOnboardingLocally()
+          console.log('✅ Onboarding completed successfully (without habit system)')
+          
+          setTimeout(() => {
+            Alert.alert(
+              'Welcome! 🎉',
+              `Great job! You've completed the onboarding and earned ${demoXP} XP. Your schedule is ready!`,
+              [{ text: 'Let\'s Go!' }]
+            )
+          }, 500)
+          
+          onComplete()
+          return
+        }
+        
+        console.log('Using fallback goal template:', fallbackGoal.id)
+        goalTemplates = fallbackGoal
       }
 
-      console.log('✅ Goal created successfully:', createdGoal.id)
+      console.log('✅ Found goal template:', goalTemplates.id)
 
-      // Create initial habits/schedules linked to the goal
-      const today = new Date()
-      const schedulePromises = selectedHabits.map(async (habit, index) => {
-        const scheduleDate = new Date(today)
-        scheduleDate.setDate(today.getDate() + index) // Spread over next few days
+      // Check if user already has this active goal
+      const { data: existingGoal } = await supabase
+        .from('user_active_goals')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('goal_template_id', goalTemplates.id)
+        .single()
 
-        const scheduleData = {
+      let createdUserGoal
+      if (existingGoal) {
+        console.log('✅ User already has this active goal:', existingGoal.id)
+        createdUserGoal = existingGoal
+      } else {
+        // Create user active goal
+        const userActiveGoalData = {
           user_id: user.id,
-          goal_id: createdGoal.id,
-          title: habit.title,
-          description: habit.description,
-          schedule_date: scheduleDate.toISOString().split('T')[0],
-          schedule_time: index === 0 ? '09:00' : index === 1 ? '18:00' : '12:00', // Spread across day
-          completed: false,
-          priority: 'medium'
+          goal_template_id: goalTemplates.id,
+          status: 'active',
+          current_level: 1,
+          time_commitment: timeCommitment,
+          start_date: new Date().toISOString().split('T')[0]
         }
 
-        return supabase.from('schedules').insert(scheduleData)
-      })
+        console.log('Creating user active goal:', userActiveGoalData)
+        const { data: newUserGoal, error: userGoalError } = await supabase
+          .from('user_active_goals')
+          .insert(userActiveGoalData)
+          .select()
+          .single()
 
-      const scheduleResults = await Promise.all(schedulePromises)
-      const scheduleErrors = scheduleResults.filter(result => result.error)
-      
-      if (scheduleErrors.length > 0) {
-        console.error('Some schedules failed to create:', scheduleErrors)
+        if (userGoalError) {
+          console.error('Error creating user active goal:', userGoalError)
+          throw userGoalError
+        }
+        
+        createdUserGoal = newUserGoal
+      }
+
+      console.log('✅ User active goal created successfully:', createdUserGoal.id)
+
+      // Create user XP progress if it doesn't exist
+      const { data: existingXP } = await supabase
+        .from('user_xp_progress')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!existingXP) {
+        const userXPData = {
+          user_id: user.id,
+          total_xp: demoXP || 0,
+          current_level: 1,
+          xp_to_next_level: 100 - (demoXP || 0),
+          daily_xp_goal: timeCommitment === 'light' ? 30 : timeCommitment === 'moderate' ? 50 : 80,
+          current_streak: 0,
+          best_streak: 0
+        }
+
+        console.log('Creating user XP progress:', userXPData)
+        const { error: xpError } = await supabase
+          .from('user_xp_progress')
+          .insert(userXPData)
+
+        if (xpError) {
+          console.error('Error creating XP progress:', xpError)
+          // Don't throw, XP is not critical for onboarding
+        } else {
+          console.log('✅ User XP progress created successfully')
+        }
+      }
+
+      // Get habit templates for this goal and create user habit progress
+      const { data: habitTemplates, error: habitTemplateError } = await supabase
+        .from('habit_templates')
+        .select('id, title, level, xp_reward')
+        .eq('goal_template_id', goalTemplates.id)
+        .eq('level', 1) // Start with level 1 habits
+        .order('order_index')
+
+      if (habitTemplateError || !habitTemplates?.length) {
+        console.error('No habit templates found:', habitTemplateError)
+        // Continue without habits for now
       } else {
-        console.log('✅ All initial schedules created successfully')
+        console.log(`Found ${habitTemplates.length} level 1 habit templates`)
+
+        // Create user habit progress for level 1 habits
+        const habitProgressPromises = habitTemplates.slice(0, Math.min(3, habitTemplates.length)).map(async (habitTemplate) => {
+          const habitProgressData = {
+            user_id: user.id,
+            user_active_goal_id: createdUserGoal.id,
+            habit_template_id: habitTemplate.id,
+            status: 'available', // First few habits are immediately available
+            completed_count: 0,
+            best_streak: 0,
+            current_streak: 0,
+            total_xp_earned: 0,
+            unlocked_at: new Date().toISOString()
+          }
+
+          return supabase.from('user_habit_progress').insert(habitProgressData)
+        })
+
+        const habitResults = await Promise.all(habitProgressPromises)
+        const habitErrors = habitResults.filter(result => result.error)
+        
+        if (habitErrors.length > 0) {
+          console.error('Some habit progress entries failed to create:', habitErrors)
+        } else {
+          console.log('✅ All initial habit progress entries created successfully')
+        }
       }
 
       // Save onboarding completion with enhanced data
       const onboardingData = {
         user_id: user.id,
-        primary_goal: selectedGoal?.id || 'custom',
+        primary_goal: goalTemplates.id, // Use the actual goal template ID
         motivation_context: motivationContext,
         time_commitment: timeCommitment,
-        selected_category: selectedCategory?.id || 'physical-health',
+        selected_category: goalTemplates.skill_id, // Use the skill ID
         completed_at: new Date().toISOString()
       }
 
@@ -382,7 +543,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
       setTimeout(() => {
         Alert.alert(
           'Welcome! 🎉',
-          `Your ${selectedGoal?.title || 'goal'} journey is ready! You have ${selectedHabits.length} habits set up to get started.`,
+          `Your ${selectedGoal?.title || 'goal'} journey is ready! You've unlocked Level 1 habits and earned ${demoXP} XP. Time to build amazing habits!`,
           [{ text: 'Let\'s Go!' }]
         )
       }, 1000)

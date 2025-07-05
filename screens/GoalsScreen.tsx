@@ -51,7 +51,7 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
     if (route?.params?.refresh) {
       // Handle optimistic updates first for immediate UI response
       if (route.params?.newGoal) {
-        setGoals(prevGoals => [route.params.newGoal!, ...prevGoals])
+        setGoals(prevGoals => [route.params!.newGoal!, ...prevGoals])
       } else if (route.params?.updatedGoal) {
         setGoals(prevGoals => 
           prevGoals.map(goal => 
@@ -1061,5 +1061,11 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 1,
     marginBottom: 2,
+  },
+  goalTargetDate: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
+    opacity: 0.8,
   },
 })

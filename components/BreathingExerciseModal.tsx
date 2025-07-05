@@ -170,6 +170,9 @@ export const BreathingExerciseModal: React.FC<BreathingExerciseModalProps> = ({
   const createFallbackAudio = async () => {
     try {
       const ambientUri = createWorkingAmbientSound()
+      if (!ambientUri) {
+        throw new Error('Failed to create ambient sound')
+      }
       const { sound: newAmbientSound } = await Audio.Sound.createAsync(
         { uri: ambientUri },
         {
@@ -730,12 +733,12 @@ export const BreathingExerciseModal: React.FC<BreathingExerciseModalProps> = ({
   const renderParticles = () => {
     const particles = [particleAnim1, particleAnim2, particleAnim3, particleAnim4, particleAnim5]
     const positions = [
-      { top: '20%', left: '15%' },
-      { top: '30%', right: '20%' },
-      { top: '60%', left: '10%' },
-      { top: '70%', right: '15%' },
-      { top: '45%', left: '80%' },
-    ]
+      { top: width * 0.2, left: width * 0.15 },
+      { top: width * 0.3, right: width * 0.2 },
+      { top: width * 0.6, left: width * 0.1 },
+      { top: width * 0.7, right: width * 0.15 },
+      { top: width * 0.45, left: width * 0.8 },
+    ] as const
 
     return particles.map((particle, index) => (
       <Animated.View

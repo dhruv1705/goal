@@ -351,8 +351,10 @@ export const PreferencesProvider: React.FC<PreferencesProviderProps> = ({ childr
         user_id: user.id,
         primary_goal: guestData.selectedGoal?.id || 'transferred-from-guest',
         motivation_context: guestData.motivationContext || 'Transferred from guest experience',
-        time_commitment: guestData.timeCommitment,
-        selected_category: guestData.selectedCategory?.id || 'physical-health',
+        // Note: time_commitment and selected_category columns may not exist yet
+        // Remove these if migration hasn't been applied:
+        // time_commitment: guestData.timeCommitment,
+        // selected_category: guestData.selectedCategory?.id || 'physical-health',
         completed_at: new Date().toISOString()
       }
 

@@ -215,6 +215,7 @@ const AppContent = () => {
         {renderCurrentPhase()}
       </Stack.Navigator>
     </NavigationContainer>
+  )
 }
 
 const AppNavigator = () => {

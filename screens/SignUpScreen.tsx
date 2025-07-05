@@ -62,7 +62,11 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
     >
       <View style={styles.form}>
         <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Sign up for Life Sync</Text>
+        <Text style={styles.subtitle}>Sign up to save your progress and unlock more</Text>
+        
+        <View style={styles.demoProgressBanner}>
+          <Text style={styles.bannerText}>🎆 Keep your demo progress and unlock more!</Text>
+        </View>
 
         <TextInput
           style={styles.input}
@@ -150,8 +154,22 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 16,
     color: '#666',
+  },
+  demoProgressBanner: {
+    backgroundColor: '#FEF3C7',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  bannerText: {
+    fontSize: 14,
+    color: '#D97706',
+    textAlign: 'center',
+    fontWeight: '600',
   },
   input: {
     height: 50,

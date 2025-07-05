@@ -8,6 +8,7 @@ import { PreferencesProvider, usePreferences } from './contexts/PreferencesConte
 import { LoginScreen } from './screens/LoginScreen'
 import { SignUpScreen } from './screens/SignUpScreen'
 import { OnboardingScreen } from './screens/OnboardingScreen'
+import { DemoChoiceScreen } from './screens/DemoChoiceScreen'
 import { ScheduleScreen } from './screens/ScheduleScreen'
 import { AddEditScheduleScreen } from './screens/AddEditScheduleScreen'
 import { ProfileScreen } from './screens/ProfileScreen'
@@ -63,10 +64,20 @@ const AppContent = () => {
   const { user, loading: authLoading } = useAuth()
   const { onboardingCompleted, loading: preferencesLoading, refreshPreferences } = usePreferences()
   const [forceMainApp, setForceMainApp] = React.useState(false)
+  const [appPhase, setAppPhase] = React.useState<'demo' | 'choice' | 'auth' | 'main'>('demo')
+  const [demoProgress, setDemoProgress] = React.useState({ totalXP: 0, completedHabits: 0 })
   const { isDarkTheme } = React.useContext(AppContext)
 
   const loading = authLoading || (user && preferencesLoading)
   const shouldShowOnboarding = user && !onboardingCompleted && !forceMainApp
+  
+  // Determine app phase based on user state
+  React.useEffect(() => {
+    if (user) {
+      setAppPhase('main') // User is logged in, go to main app
+    }
+    // If no user and not explicitly set, stay in demo phase
+  }, [user])
 
   // Add debug logging
   console.log('🔍 AppContent render:', {
@@ -89,10 +100,65 @@ const AppContent = () => {
 
   console.log(shouldShowOnboarding ? 'Showing onboarding screen' : 'Showing main app navigation')
 
-  return (
-    <NavigationContainer theme={isDarkTheme ? DarkThemes : LightTheme}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {shouldShowOnboarding ? (
+  const handleDemoComplete = (totalXP: number, completedHabits: number) => {
+    setDemoProgress({ totalXP, completedHabits })
+    setAppPhase('choice')
+  }
+  
+  const handleSaveProgress = () => {
+    setAppPhase('auth')
+  }
+  
+  const handleContinueAsGuest = () => {
+    // For now, go to auth - we'll implement guest mode later
+    setAppPhase('auth')
+  }
+  
+  const handleAuthComplete = () => {
+    setAppPhase('main')
+  }
+
+  const renderCurrentPhase = () => {
+    switch (appPhase) {
+      case 'demo':
+        return (
+          <Stack.Screen 
+            name="Demo" 
+            children={(props) => (
+              <OnboardingScreen 
+                {...props} 
+                onComplete={handleDemoComplete}
+              />
+            )}
+          />
+        )
+      
+      case 'choice':
+        return (
+          <Stack.Screen 
+            name="Choice" 
+            children={(props) => (
+              <DemoChoiceScreen 
+                {...props}
+                totalXP={demoProgress.totalXP}
+                completedHabits={demoProgress.completedHabits}
+                onSaveProgress={handleSaveProgress}
+                onContinueAsGuest={handleContinueAsGuest}
+              />
+            )}
+          />
+        )
+        
+      case 'auth':
+        return (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="SignUp" component={SignUpScreen} />
+          </>
+        )
+        
+      case 'main':
+        return shouldShowOnboarding ? (
           <Stack.Screen 
             name="Onboarding" 
             children={(props) => (
@@ -109,7 +175,7 @@ const AppContent = () => {
               />
             )}
           />
-        ) : user ? (
+        ) : (
           <>
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Categories" component={CategoriesScreen} />
@@ -122,12 +188,17 @@ const AppContent = () => {
             <Stack.Screen name="Feedback" component={FeedbackScreen} />
             <Stack.Screen name="Talk" component={TalkScreen} />
           </>
-        ) : (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="SignUp" component={SignUpScreen} />
-          </>
-        )}
+        )
+        
+      default:
+        return null
+    }
+  }
+
+  return (
+    <NavigationContainer theme={isDarkTheme ? DarkThemes : LightTheme}>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {renderCurrentPhase()}
       </Stack.Navigator>
     </NavigationContainer>
   )

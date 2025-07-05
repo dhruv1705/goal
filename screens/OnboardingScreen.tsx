@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   View,
   Text,
@@ -8,17 +8,21 @@ import {
   StatusBar,
   Dimensions,
   Alert,
+  Animated,
+  Easing,
 } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
+import { BreathingExerciseModal } from '../components/BreathingExerciseModal'
 
-const { width } = Dimensions.get('window')
+const { width, height } = Dimensions.get('window')
 
 interface OnboardingScreenProps {
   navigation: any
-  onComplete: () => void
+  onComplete: (totalXP?: number, completedHabits?: number) => void
 }
 
 interface CategoryOption {
@@ -65,6 +69,44 @@ const categories: CategoryOption[] = [
   },
 ]
 
+const demoHabits = [
+  { 
+    id: 'water', 
+    label: 'Drink a glass of water', 
+    icon: '💧', 
+    xp: 10,
+    type: 'confirmation',
+    instruction: 'Grab a glass of water and take a sip!'
+  },
+  { 
+    id: 'stretch', 
+    label: 'Do a 2-minute stretch', 
+    icon: '🤸‍♂️', 
+    xp: 15,
+    type: 'timer',
+    duration: 120,
+    instruction: 'Let\'s do some simple stretches together'
+  },
+  { 
+    id: 'breathe', 
+    label: 'Take 5 deep breaths', 
+    icon: '🌬️', 
+    xp: 10,
+    type: 'breathing',
+    duration: 30,
+    instruction: 'Follow the breathing animation'
+  },
+  { 
+    id: 'smile', 
+    label: 'Smile for 10 seconds', 
+    icon: '😊', 
+    xp: 5,
+    type: 'timer',
+    duration: 10,
+    instruction: 'Keep smiling! You\'re doing great!'
+  },
+]
+
 const primaryGoalOptions = [
   { id: 'health-transformation', label: 'Transform my health and fitness', icon: '🏃‍♂️' },
   { id: 'financial-freedom', label: 'Achieve financial stability', icon: '💎' },
@@ -74,16 +116,46 @@ const primaryGoalOptions = [
 ]
 
 export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, onComplete }) => {
-  const [currentStep, setCurrentStep] = useState(1)
+  const [currentStep, setCurrentStep] = useState(0) // Start at 0 for demo
   const [primaryGoal, setPrimaryGoal] = useState<string>('')
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [motivationContext, setMotivationContext] = useState<string>('')
   const [loading, setLoading] = useState(false)
+  const [demoCompleted, setDemoCompleted] = useState(false)
+  const [totalXP, setTotalXP] = useState(0)
+  const [completedHabits, setCompletedHabits] = useState<string[]>([])
+  const [activeHabit, setActiveHabit] = useState<string | null>(null)
+  const [habitTimer, setHabitTimer] = useState(0)
+  const [breathingPhase, setBreathingPhase] = useState<'inhale' | 'exhale'>('inhale')
+  const [breathCount, setBreathCount] = useState(0)
+  const [breathingText, setBreathingText] = useState('')
+  const [showBreathingModal, setShowBreathingModal] = useState(false)
+  
   const { user } = useAuth()
   const { updatePreferences, completeOnboardingLocally } = usePreferences()
   const insets = useSafeAreaInsets()
 
-  const totalSteps = 3
+  // Animation refs
+  const fadeAnim = useRef(new Animated.Value(0)).current
+  const slideAnim = useRef(new Animated.Value(50)).current
+  const scaleAnim = useRef(new Animated.Value(0.8)).current
+  const xpAnim = useRef(new Animated.Value(0)).current
+  const streakAnim = useRef(new Animated.Value(0)).current
+  const timerAnim = useRef(new Animated.Value(0)).current
+  
+  // Timer ref
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Breathing guidance texts
+  const encouragingTexts = [
+    "Feel the calm flowing through you...",
+    "Let go of any tension...",
+    "You're doing wonderfully...",
+    "Notice the peace within...",
+    "Almost there, stay focused..."
+  ]
+
+  const totalSteps = 4 // Added demo step
 
   const handleCategorySelect = (categoryId: string) => {
     if (selectedCategories.includes(categoryId)) {
@@ -204,6 +276,260 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
     }
   }
 
+  // Animation effects
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 800,
+        easing: Easing.out(Easing.back(1.5)),
+        useNativeDriver: true,
+      }),
+    ]).start()
+  }, [currentStep])
+
+  const startHabitActivity = (habitId: string) => {
+    if (completedHabits.includes(habitId)) return
+    
+    const habit = demoHabits.find(h => h.id === habitId)
+    if (!habit) return
+    
+    setActiveHabit(habitId)
+    
+    if (habit.type === 'confirmation') {
+      // Simple confirmation - just show instruction
+      Alert.alert(
+        habit.instruction,
+        'Ready to continue?',
+        [
+          { text: 'Not Yet', style: 'cancel' },
+          { text: 'Done! 💪', onPress: () => completeHabit(habitId, habit.xp) }
+        ]
+      )
+    } else if (habit.type === 'timer') {
+      // Start timer-based activity
+      setHabitTimer(habit.duration!)
+      startTimer(habitId, habit.duration!, habit.xp)
+    } else if (habit.type === 'breathing') {
+      // Start full-screen breathing exercise
+      setShowBreathingModal(true)
+    }
+  }
+  
+  const startTimer = (habitId: string, duration: number, xp: number) => {
+    timerRef.current = setInterval(() => {
+      setHabitTimer(prev => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current!)
+          completeHabit(habitId, xp)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    
+    // Progress animation
+    Animated.timing(timerAnim, {
+      toValue: 1,
+      duration: duration * 1000,
+      useNativeDriver: false,
+    }).start()
+  }
+  
+  const handleBreathingComplete = () => {
+    setShowBreathingModal(false)
+    const habit = demoHabits.find(h => h.id === 'breathe')
+    if (habit) {
+      completeHabit('breathe', habit.xp)
+    }
+  }
+
+  const handleBreathingCancel = () => {
+    setShowBreathingModal(false)
+    setActiveHabit(null)
+  }
+
+  const startBreathingExercise = (habitId: string, xp: number) => {
+    // Start particle animations
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(particleAnim1, {
+          toValue: 1,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(particleAnim1, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start()
+    
+    Animated.loop(
+      Animated.sequence([
+        Animated.delay(1000),
+        Animated.timing(particleAnim2, {
+          toValue: 1,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(particleAnim2, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start()
+    
+    Animated.loop(
+      Animated.sequence([
+        Animated.delay(2000),
+        Animated.timing(particleAnim3, {
+          toValue: 1,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(particleAnim3, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start()
+    
+    Animated.timing(particleOpacity, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start()
+    
+    const breathingCycle = () => {
+      const currentBreathIndex = breathCount
+      const encouragingText = encouragingTexts[Math.min(currentBreathIndex, encouragingTexts.length - 1)]
+      setBreathingText(encouragingText)
+      
+      // Inhale phase
+      setBreathingPhase('inhale')
+      Animated.parallel([
+        Animated.timing(breathingAnim, {
+          toValue: 1.3,
+          duration: 3500,
+          easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+          useNativeDriver: true,
+        }),
+        Animated.timing(breathingColorAnim, {
+          toValue: 1,
+          duration: 3500,
+          easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+          useNativeDriver: false,
+        })
+      ]).start(() => {
+        // Brief hold
+        setTimeout(() => {
+          // Exhale phase
+          setBreathingPhase('exhale')
+          Animated.parallel([
+            Animated.timing(breathingAnim, {
+              toValue: 0.8,
+              duration: 3500,
+              easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+              useNativeDriver: true,
+            }),
+            Animated.timing(breathingColorAnim, {
+              toValue: 0,
+              duration: 3500,
+              easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+              useNativeDriver: false,
+            })
+          ]).start(() => {
+            setBreathCount(prev => {
+              const newCount = prev + 1
+              if (newCount >= 5) {
+                completeHabit(habitId, xp)
+                return 5
+              }
+              setTimeout(breathingCycle, 800) // Brief pause between breaths
+              return newCount
+            })
+          })
+        }, 500) // Brief hold at top of inhale
+      })
+    }
+    breathingCycle()
+  }
+  
+  const completeHabit = (habitId: string, xp: number) => {
+    setActiveHabit(null)
+    setHabitTimer(0)
+    timerAnim.setValue(0)
+    
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+    }
+    
+    setCompletedHabits([...completedHabits, habitId])
+    setTotalXP(totalXP + xp)
+    
+    // XP animation
+    Animated.sequence([
+      Animated.timing(xpAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(xpAnim, {
+        toValue: 0,
+        duration: 300,
+        delay: 1000,
+        useNativeDriver: true,
+      }),
+    ]).start()
+
+    // Streak animation
+    Animated.sequence([
+      Animated.timing(streakAnim, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.back(2)),
+        useNativeDriver: true,
+      }),
+    ]).start()
+
+    // Show completion celebration
+    setTimeout(() => {
+      if (completedHabits.length + 1 >= 2) {
+        setDemoCompleted(true)
+        Alert.alert(
+          'Amazing! 🎉', 
+          'You just experienced the power of habit completion! Ready to build your personalized habit journey?',
+          [{ text: 'Let\'s Go!', onPress: () => onComplete(totalXP, completedHabits.length) }]
+        )
+      }
+    }, 1500)
+  }
+  
+  const cancelHabitActivity = () => {
+    setActiveHabit(null)
+    setHabitTimer(0)
+    timerAnim.setValue(0)
+    
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+    }
+  }
+
   const handleNext = () => {
     if (currentStep === 1 && !primaryGoal) {
       Alert.alert('Selection Required', 'Please select your primary goal to continue.')
@@ -214,7 +540,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
       return
     }
     
-    if (currentStep < totalSteps) {
+    if (currentStep < totalSteps - 1) {
       setCurrentStep(currentStep + 1)
     } else {
       handleComplete()
@@ -243,9 +569,9 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
 
   const renderStep1 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>What brings you here?</Text>
+      <Text style={styles.stepTitle}>What's your main goal? 🎯</Text>
       <Text style={styles.stepSubtitle}>
-        Tell us your primary goal so we can personalize your experience
+        Based on what you just experienced, what would you like to focus on?
       </Text>
 
       <View style={styles.optionsContainer}>
@@ -348,9 +674,9 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
 
   const renderStep3 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>You're all set! 🎉</Text>
+      <Text style={styles.stepTitle}>Ready to build your streak! 🔥</Text>
       <Text style={styles.stepSubtitle}>
-        We'll personalize your experience based on your preferences
+        You've already completed {completedHabits.length} habits and earned {totalXP} XP! Let's keep the momentum going.
       </Text>
 
       <View style={styles.summaryContainer}>
@@ -387,8 +713,129 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
     </View>
   )
 
+  const renderDemoStep = () => (
+    <Animated.View 
+      style={[
+        styles.stepContainer,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }, { scale: scaleAnim }]
+        }
+      ]}
+    >
+      <Text style={styles.demoTitle}>Let's start with something simple! 🎆</Text>
+      <Text style={styles.demoSubtitle}>
+        Complete 2 quick habits to see how good it feels to build momentum
+      </Text>
+
+      <View style={styles.demoHabitsContainer}>
+        {demoHabits.map((habit) => {
+          const isCompleted = completedHabits.includes(habit.id)
+          const isActive = activeHabit === habit.id
+          
+          return (
+            <TouchableOpacity
+              key={habit.id}
+              style={[
+                styles.demoHabitCard,
+                isCompleted && styles.demoHabitCardCompleted,
+                isActive && styles.demoHabitCardActive
+              ]}
+              onPress={() => startHabitActivity(habit.id)}
+              disabled={isCompleted || isActive}
+            >
+              <View style={styles.demoHabitIcon}>
+                <Text style={styles.demoHabitEmoji}>{habit.icon}</Text>
+              </View>
+              
+              <View style={styles.demoHabitContent}>
+                <Text style={[
+                  styles.demoHabitLabel,
+                  isCompleted && styles.demoHabitLabelCompleted
+                ]}>
+                  {habit.label}
+                </Text>
+                
+                {isActive && habit.type === 'timer' && (
+                  <View style={styles.activityContainer}>
+                    <View style={styles.timerContainer}>
+                      <Text style={styles.timerText}>{habitTimer}s</Text>
+                      <View style={styles.timerProgress}>
+                        <Animated.View style={[
+                          styles.timerProgressFill,
+                          { width: timerAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0%', '100%']
+                          }) }
+                        ]} />
+                      </View>
+                      <Text style={styles.timerInstruction}>{habit.instruction}</Text>
+                    </View>
+                    
+                    <TouchableOpacity 
+                      style={styles.cancelButton}
+                      onPress={cancelHabitActivity}
+                    >
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+              
+              <View style={styles.demoHabitXP}>
+                <Text style={styles.demoHabitXPText}>+{habit.xp} XP</Text>
+              </View>
+              
+              {isCompleted && (
+                <View style={styles.completedBadge}>
+                  <Text style={styles.completedBadgeText}>✓</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )
+        })}
+      </View>
+
+      {/* XP Display */}
+      <Animated.View 
+        style={[
+          styles.xpContainer,
+          {
+            opacity: xpAnim,
+            transform: [{ scale: xpAnim }]
+          }
+        ]}
+      >
+        <Text style={styles.xpText}>+{totalXP} XP Earned! 🎆</Text>
+      </Animated.View>
+
+      {/* Streak Display */}
+      <Animated.View 
+        style={[
+          styles.streakContainer,
+          {
+            opacity: streakAnim,
+            transform: [{ scale: streakAnim }]
+          }
+        ]}
+      >
+        <Text style={styles.streakText}>🔥 {completedHabits.length} habit streak!</Text>
+      </Animated.View>
+
+      {demoCompleted && (
+        <View style={styles.demoCompletedContainer}>
+          <Text style={styles.demoCompletedText}>
+            🎉 You're already building momentum! Let's make this a daily habit.
+          </Text>
+        </View>
+      )}
+    </Animated.View>
+  )
+
   const renderCurrentStep = () => {
     switch (currentStep) {
+      case 0:
+        return renderDemoStep()
       case 1:
         return renderStep1()
       case 2:
@@ -396,7 +843,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
       case 3:
         return renderStep3()
       default:
-        return renderStep1()
+        return renderDemoStep()
     }
   }
 
@@ -436,22 +883,34 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
           </TouchableOpacity>
         )}
         
-        <TouchableOpacity
-          style={[
-            styles.nextButton,
-            loading && styles.nextButtonDisabled,
-            currentStep === 1 ? styles.nextButtonFull : styles.nextButtonHalf
-          ]}
-          onPress={handleNext}
-          disabled={loading}
-        >
-          <Text style={styles.nextButtonText}>
-            {loading ? 'Setting up...' : currentStep === totalSteps ? 'Get Started' : 'Next'}
-          </Text>
-        </TouchableOpacity>
+        {currentStep === 0 ? (
+          // Demo step - only show next after completing habits
+          demoCompleted && (
+            <TouchableOpacity
+              style={[styles.nextButton, styles.nextButtonFull]}
+              onPress={() => onComplete(totalXP, completedHabits.length)}
+            >
+              <Text style={styles.nextButtonText}>Build My Habit Plan! 🚀</Text>
+            </TouchableOpacity>
+          )
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.nextButton,
+              loading && styles.nextButtonDisabled,
+              currentStep === 1 ? styles.nextButtonFull : styles.nextButtonHalf
+            ]}
+            onPress={handleNext}
+            disabled={loading}
+          >
+            <Text style={styles.nextButtonText}>
+              {loading ? 'Setting up...' : currentStep === totalSteps - 1 ? 'Get Started' : 'Next'}
+            </Text>
+          </TouchableOpacity>
+        )}
         
         {/* Debug: Add a skip button for testing */}
-        {currentStep === totalSteps && (
+        {currentStep === totalSteps - 1 && (
           <TouchableOpacity
             style={[styles.nextButton, { backgroundColor: '#6B7280', marginTop: 8 }]}
             onPress={() => {
@@ -464,7 +923,6 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
                     text: 'Skip', 
                     onPress: () => {
                       console.log('Skipping onboarding setup')
-                      // Mark as completed locally and then call onComplete
                       completeOnboardingLocally()
                       onComplete()
                     }
@@ -477,6 +935,13 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Full-screen breathing modal */}
+      <BreathingExerciseModal
+        visible={showBreathingModal}
+        onComplete={handleBreathingComplete}
+        onCancel={handleBreathingCancel}
+      />
     </View>
   )
 }
@@ -548,6 +1013,279 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     marginBottom: 8,
     textAlign: 'center',
+  },
+  demoTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#7C3AED',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  demoSubtitle: {
+    fontSize: 18,
+    color: '#4B5563',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 26,
+  },
+  demoHabitsContainer: {
+    gap: 16,
+    marginBottom: 24,
+  },
+  demoHabitCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  demoHabitCardCompleted: {
+    borderColor: '#10B981',
+    backgroundColor: '#F0FDF4',
+  },
+  demoHabitCardActive: {
+    borderColor: '#7C3AED',
+    backgroundColor: '#F8F7FF',
+  },
+  demoHabitContent: {
+    flex: 1,
+  },
+  demoHabitIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  demoHabitEmoji: {
+    fontSize: 24,
+  },
+  demoHabitLabel: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  demoHabitLabelCompleted: {
+    color: '#059669',
+  },
+  demoHabitXP: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  breathingContainer: {
+    width: 120,
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  breathingCircleContainer: {
+    width: 80,
+    height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  breathingCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  breathingGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  particle: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#A78BFA',
+  },
+  particle1: {
+    top: -10,
+    left: '50%',
+    marginLeft: -4,
+  },
+  particle2: {
+    top: 10,
+    right: -10,
+  },
+  particle3: {
+    top: 15,
+    left: -10,
+  },
+  breathingTextContainer: {
+    alignItems: 'center',
+    minHeight: 80,
+  },
+  breathingPhaseText: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#8B5CF6',
+    marginBottom: 8,
+  },
+  breathingEncouragement: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginBottom: 12,
+    minHeight: 20,
+  },
+  breathingProgressContainer: {
+    alignItems: 'center',
+  },
+  breathingProgressRing: {
+    flexDirection: 'row',
+    marginBottom: 8,
+    gap: 8,
+  },
+  breathingProgressDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#E5E7EB',
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+  },
+  breathingProgressDotCompleted: {
+    backgroundColor: '#8B5CF6',
+    borderColor: '#7C3AED',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  activityContainer: {
+    marginTop: 8,
+  },
+  timerContainer: {
+    alignItems: 'center',
+  },
+  timerText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#7C3AED',
+    marginBottom: 8,
+  },
+  timerProgress: {
+    width: '100%',
+    height: 6,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 3,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  timerProgressFill: {
+    height: '100%',
+    backgroundColor: '#7C3AED',
+    borderRadius: 3,
+  },
+  timerInstruction: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  breathingCount: {
+    fontSize: 14,
+    color: '#8B5CF6',
+    fontWeight: '600',
+  },
+  cancelButton: {
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: 'center',
+  },
+  cancelButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  demoHabitXPText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#D97706',
+  },
+  completedBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#10B981',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  completedBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  xpContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -width * 0.2 }, { translateY: -50 }],
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: '#F59E0B',
+  },
+  xpText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#D97706',
+  },
+  streakContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  streakText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#EF4444',
+  },
+  demoCompletedContainer: {
+    backgroundColor: '#F0FDF4',
+    padding: 20,
+    borderRadius: 16,
+    marginTop: 20,
+    borderWidth: 2,
+    borderColor: '#10B981',
+  },
+  demoCompletedText: {
+    fontSize: 16,
+    color: '#065F46',
+    textAlign: 'center',
+    fontWeight: '600',
+    lineHeight: 24,
   },
   stepSubtitle: {
     fontSize: 16,

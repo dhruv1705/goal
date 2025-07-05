@@ -10,18 +10,13 @@ import {
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../contexts/AuthContext'
-import { usePreferences } from '../contexts/PreferencesContext'
 import { BreathingExerciseModal } from '../components/BreathingExerciseModal'
 import { StretchExerciseModal } from '../components/StretchExerciseModal'
 
-
-interface OnboardingScreenProps {
+interface DemoScreenProps {
   navigation: any
   onComplete: (totalXP?: number, completedHabits?: number) => void
 }
-
 
 interface GoalSpecificDemo {
   id: string
@@ -102,27 +97,18 @@ const primaryGoalOptions = [
   { id: 'overall-balance', label: 'Create overall life balance', icon: '⚖️' },
 ]
 
-export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, onComplete }) => {
-  const [currentStep, setCurrentStep] = useState(0) // Start at 0 for goal selection
+export const DemoScreen: React.FC<DemoScreenProps> = ({ navigation, onComplete }) => {
+  const [currentStep, setCurrentStep] = useState(0)
   const [primaryGoal, setPrimaryGoal] = useState<string>('')
   const [selectedExpense, setSelectedExpense] = useState<string>('')
   const [gratitudePerson, setGratitudePerson] = useState<string>('')
   const [selectedMood, setSelectedMood] = useState<string>('')
-  const [motivationContext, setMotivationContext] = useState<string>('')
-  const [loading, setLoading] = useState(false)
   const [demoCompleted, setDemoCompleted] = useState(false)
   const [totalXP, setTotalXP] = useState(0)
-  const [completedDemo, setCompletedDemo] = useState<string | null>(null)
-  const [activeHabit, setActiveHabit] = useState<string | null>(null)
   const [showBreathingModal, setShowBreathingModal] = useState(false)
   const [showStretchModal, setShowStretchModal] = useState(false)
   
-  const { user } = useAuth()
-  const { updatePreferences, completeOnboardingLocally } = usePreferences()
   const insets = useSafeAreaInsets()
-
-  
-
   const totalSteps = 3 // Goal Selection -> Demo -> Summary
 
   const getCurrentDemo = (): GoalSpecificDemo | null => {
@@ -203,84 +189,10 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
     )
   }
 
-  const handleComplete = async () => {
-    if (!user) {
-      Alert.alert('Error', 'User not authenticated')
-      return
-    }
-
-    setLoading(true)
-    console.log('=== ONBOARDING COMPLETION STARTED ===')
-
-    try {
-      console.log('Starting onboarding completion...', {
-        userId: user.id,
-        primaryGoal,
-        completedDemo
-      })
-
-      // Save onboarding completion
-      const onboardingData = {
-        user_id: user.id,
-        primary_goal: primaryGoal,
-        motivation_context: motivationContext,
-      }
-
-      console.log('Saving onboarding data:', onboardingData)
-
-      const { error: onboardingError } = await supabase
-        .from('user_onboarding')
-        .upsert(onboardingData, { onConflict: 'user_id' })
-
-      if (onboardingError) {
-        console.error('Error saving onboarding:', onboardingError)
-        throw onboardingError
-      }
-
-      console.log('✅ Onboarding saved successfully')
-
-      // CRITICAL: Update local state first
-      console.log('🔄 Updating local onboarding state...')
-      completeOnboardingLocally()
-      
-      // Wait a moment for state to propagate
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
-      console.log('🚀 Calling onComplete callback...')
-      onComplete()
-      
-      console.log('=== ONBOARDING COMPLETION FINISHED ===')
-
-      // Show success message after navigation
-      setTimeout(() => {
-        Alert.alert(
-          'Welcome! 🎉',
-          'Your personalized experience is ready!',
-          [{ text: 'OK' }]
-        )
-      }, 1000)
-
-    } catch (error: any) {
-      console.error('❌ Error completing onboarding:', error)
-      Alert.alert(
-        'Setup Error',
-        `Failed to save your preferences: ${error.message || 'Unknown error'}. Would you like to try again?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Try Again', onPress: handleComplete }
-        ]
-      )
-    } finally {
-      setLoading(false)
-    }
-  }
-
-
   const completeDemoTask = () => {
     const demo = getCurrentDemo()
     if (!demo) return
     
-    setCompletedDemo(demo.id)
     setTotalXP(demo.xp)
     setDemoCompleted(true)
     
@@ -293,24 +205,21 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
       )
     }, 500)
   }
-  
-  
+
   const handleBreathingComplete = () => {
     setShowBreathingModal(false)
     completeDemoTask()
   }
 
   const handleBreathingCancel = async () => {
-    console.log('🔄 Onboarding: Breathing exercise cancelled')
     setShowBreathingModal(false)
-    setActiveHabit(null)
     
-    // Additional safety: Stop any voice that might be playing
+    // Stop any voice that might be playing
     try {
       const Speech = await import('expo-speech')
       await Speech.stop()
     } catch (error) {
-      console.log('Error stopping speech in onboarding:', error)
+      console.log('Error stopping speech in demo:', error)
     }
   }
 
@@ -320,21 +229,16 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
   }
 
   const handleStretchCancel = async () => {
-    console.log('🔄 Onboarding: Stretch exercise cancelled')
     setShowStretchModal(false)
-    setActiveHabit(null)
     
-    // Additional safety: Stop any voice that might be playing
+    // Stop any voice that might be playing
     try {
       const Speech = await import('expo-speech')
       await Speech.stop()
     } catch (error) {
-      console.log('Error stopping speech in stretch onboarding:', error)
+      console.log('Error stopping speech in demo:', error)
     }
   }
-
-  
-  
 
   const handleNext = () => {
     if (currentStep === 0 && !primaryGoal) {
@@ -349,17 +253,18 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
     if (currentStep < totalSteps - 1) {
       setCurrentStep(currentStep + 1)
     } else {
-      handleComplete()
+      // Complete demo and pass data to choice screen
+      onComplete(totalXP, 1) // 1 habit completed
     }
   }
 
   const handleSkip = () => {
     Alert.alert(
-      'Skip Onboarding',
-      'You can always set your preferences later in the Profile settings. Continue with default settings?',
+      'Skip Demo',
+      'You can always try the demo later. Continue to sign up?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Skip', onPress: onComplete }
+        { text: 'Skip', onPress: () => onComplete(0, 0) }
       ]
     )
   }
@@ -367,9 +272,9 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
   const renderProgressBar = () => (
     <View style={styles.progressContainer}>
       <View style={styles.progressBackground}>
-        <View style={[styles.progressFill, { width: `${(currentStep / totalSteps) * 100}%` }]} />
+        <View style={[styles.progressFill, { width: `${((currentStep + 1) / totalSteps) * 100}%` }]} />
       </View>
-      <Text style={styles.progressText}>{currentStep} of {totalSteps}</Text>
+      <Text style={styles.progressText}>{currentStep + 1} of {totalSteps}</Text>
     </View>
   )
 
@@ -377,7 +282,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
     <View style={styles.stepContainer}>
       <Text style={styles.stepTitle}>What's your main goal? 🎯</Text>
       <Text style={styles.stepSubtitle}>
-        Choose your primary focus area to get started with a personalized experience
+        Choose your primary focus area to experience a personalized demo
       </Text>
 
       <View style={styles.optionsContainer}>
@@ -409,7 +314,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
 
     return (
       <View style={styles.stepContainer}>
-        <Text style={styles.stepTitle}>Let's try something! 🎆</Text>
+        <Text style={styles.stepTitle}>Try this habit! 🎆</Text>
         <Text style={styles.stepSubtitle}>
           Experience a habit that aligns with your goal: {primaryGoalOptions.find(g => g.id === primaryGoal)?.label}
         </Text>
@@ -453,7 +358,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
           {demoCompleted && (
             <View style={styles.demoSuccessContainer}>
               <Text style={styles.demoSuccessText}>
-                🎉 Great job! You earned {totalXP} XP. Ready to build your personalized habit journey?
+                🎉 Amazing! You earned {totalXP} XP. Ready to unlock your full potential?
               </Text>
             </View>
           )}
@@ -468,27 +373,27 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
     
     return (
       <View style={styles.stepContainer}>
-        <Text style={styles.stepTitle}>You're all set! 🎉</Text>
+        <Text style={styles.stepTitle}>You're a natural! 🌟</Text>
         <Text style={styles.stepSubtitle}>
-          You've experienced a habit that aligns with your goal. Let's build your personalized journey!
+          You've just experienced the power of habit building. Ready for the full experience?
         </Text>
 
         <View style={styles.summaryContainer}>
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Your Goal:</Text>
+            <Text style={styles.summaryTitle}>Demo Summary:</Text>
             <View style={styles.summaryItem}>
               <View style={styles.summaryIcon}>
                 <Text style={styles.summaryEmoji}>{goalOption?.icon}</Text>
               </View>
               <View style={styles.summaryContent}>
                 <Text style={styles.summaryName}>{goalOption?.label}</Text>
-                <Text style={styles.summaryDesc}>Your primary focus area</Text>
+                <Text style={styles.summaryDesc}>Your chosen focus area</Text>
               </View>
             </View>
             
             {demoCompleted && demo && (
               <View style={styles.demoSummaryItem}>
-                <Text style={styles.demoSummaryTitle}>Demo Completed:</Text>
+                <Text style={styles.demoSummaryTitle}>Habit Completed:</Text>
                 <View style={styles.demoSummaryRow}>
                   <Text style={styles.demoSummaryEmoji}>{demo.icon}</Text>
                   <Text style={styles.demoSummaryText}>{demo.label}</Text>
@@ -499,17 +404,17 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
           </View>
 
           <View style={styles.benefitsContainer}>
-            <Text style={styles.benefitsTitle}>What's next:</Text>
-            <Text style={styles.benefitItem}>✨ Goal-specific habit recommendations</Text>
-            <Text style={styles.benefitItem}>🎯 Personalized progress tracking</Text>
-            <Text style={styles.benefitItem}>📊 Smart reminders and motivation</Text>
-            <Text style={styles.benefitItem}>🔄 Adaptive challenges based on your goal</Text>
+            <Text style={styles.benefitsTitle}>With the full app, you get:</Text>
+            <Text style={styles.benefitItem}>✨ Hundreds of personalized habits</Text>
+            <Text style={styles.benefitItem}>🎯 Smart progress tracking & analytics</Text>
+            <Text style={styles.benefitItem}>🔥 Streak counters and rewards</Text>
+            <Text style={styles.benefitItem}>🏆 Achievements and level progression</Text>
+            <Text style={styles.benefitItem}>📊 Weekly challenges and insights</Text>
           </View>
         </View>
       </View>
     )
   }
-
 
   const renderCurrentStep = () => {
     switch (currentStep) {
@@ -531,9 +436,9 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={styles.skipText}>Skip Demo</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Welcome!</Text>
+        <Text style={styles.headerTitle}>Try Goals!</Text>
         <View style={styles.skipPlaceholder} />
       </View>
 
@@ -563,52 +468,23 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
         <TouchableOpacity
           style={[
             styles.nextButton,
-            loading && styles.nextButtonDisabled,
             currentStep === 0 ? styles.nextButtonFull : styles.nextButtonHalf
           ]}
           onPress={handleNext}
-          disabled={loading}
         >
           <Text style={styles.nextButtonText}>
-            {loading ? 'Setting up...' : currentStep === totalSteps - 1 ? 'Complete Setup' : 'Next'}
+            {currentStep === totalSteps - 1 ? 'Continue' : 'Next'}
           </Text>
         </TouchableOpacity>
-        
-        {/* Debug: Add a skip button for testing */}
-        {currentStep === totalSteps - 1 && (
-          <TouchableOpacity
-            style={[styles.nextButton, { backgroundColor: '#6B7280', marginTop: 8 }]}
-            onPress={() => {
-              Alert.alert(
-                'Skip Setup',
-                'Skip for now and use default settings?',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { 
-                    text: 'Skip', 
-                    onPress: () => {
-                      console.log('Skipping onboarding setup')
-                      completeOnboardingLocally()
-                      onComplete()
-                    }
-                  }
-                ]
-              )
-            }}
-          >
-            <Text style={styles.nextButtonText}>Skip for Now</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
-      {/* Full-screen breathing modal */}
+      {/* Modals */}
       <BreathingExerciseModal
         visible={showBreathingModal}
         onComplete={handleBreathingComplete}
         onCancel={handleBreathingCancel}
       />
 
-      {/* Full-screen stretch modal */}
       <StretchExerciseModal
         visible={showStretchModal}
         onComplete={handleStretchComplete}
@@ -637,11 +513,11 @@ const styles = StyleSheet.create({
   },
   skipText: {
     color: '#E5E7EB',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
   },
   skipPlaceholder: {
-    width: 50,
+    width: 70,
   },
   headerTitle: {
     fontSize: 24,
@@ -685,6 +561,43 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     marginBottom: 8,
     textAlign: 'center',
+  },
+  stepSubtitle: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  optionsContainer: {
+    gap: 12,
+  },
+  goalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+  },
+  goalOptionSelected: {
+    borderColor: '#7C3AED',
+    backgroundColor: '#F3F4F6',
+  },
+  goalIcon: {
+    fontSize: 24,
+    marginRight: 16,
+  },
+  goalLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#374151',
+    flex: 1,
+  },
+  goalLabelSelected: {
+    color: '#7C3AED',
+    fontWeight: '600',
   },
   demoContainer: {
     alignItems: 'center',
@@ -751,6 +664,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#D97706',
   },
+  completedBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#10B981',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    top: 12,
+    right: 12,
+  },
+  completedBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
   demoSuccessContainer: {
     backgroundColor: '#F0FDF4',
     padding: 20,
@@ -765,90 +694,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '600',
     lineHeight: 24,
-  },
-  demoSummaryItem: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  demoSummaryTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  demoSummaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  demoSummaryEmoji: {
-    fontSize: 20,
-  },
-  demoSummaryText: {
-    fontSize: 16,
-    color: '#1F2937',
-    flex: 1,
-  },
-  demoSummaryXP: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#D97706',
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  completedBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#10B981',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  completedBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  stepSubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 24,
-  },
-  optionsContainer: {
-    gap: 12,
-  },
-  goalOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-  },
-  goalOptionSelected: {
-    borderColor: '#7C3AED',
-    backgroundColor: '#F3F4F6',
-  },
-  goalIcon: {
-    fontSize: 24,
-    marginRight: 16,
-  },
-  goalLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#374151',
-    flex: 1,
-  },
-  goalLabelSelected: {
-    color: '#7C3AED',
-    fontWeight: '600',
   },
   summaryContainer: {
     gap: 24,
@@ -894,6 +739,40 @@ const styles = StyleSheet.create({
   summaryDesc: {
     fontSize: 14,
     color: '#6B7280',
+  },
+  demoSummaryItem: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  demoSummaryTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  demoSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  demoSummaryEmoji: {
+    fontSize: 20,
+  },
+  demoSummaryText: {
+    fontSize: 16,
+    color: '#1F2937',
+    flex: 1,
+  },
+  demoSummaryXP: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#D97706',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   benefitsContainer: {
     backgroundColor: '#F0F9FF',
@@ -944,9 +823,6 @@ const styles = StyleSheet.create({
   },
   nextButtonHalf: {
     flex: 2,
-  },
-  nextButtonDisabled: {
-    opacity: 0.6,
   },
   nextButtonText: {
     fontSize: 16,

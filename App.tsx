@@ -9,6 +9,8 @@ import { LoginScreen } from './screens/LoginScreen'
 import { SignUpScreen } from './screens/SignUpScreen'
 import { OnboardingScreen } from './screens/OnboardingScreen'
 import { DemoChoiceScreen } from './screens/DemoChoiceScreen'
+import { DemoScreen } from './screens/DemoScreen'
+import { WelcomeScreen } from './screens/WelcomeScreen'
 import { ScheduleScreen } from './screens/ScheduleScreen'
 import { AddEditScheduleScreen } from './screens/AddEditScheduleScreen'
 import { ProfileScreen } from './screens/ProfileScreen'
@@ -67,7 +69,7 @@ const AppContent = () => {
   const { user, loading: authLoading } = useAuth()
   const { onboardingCompleted, loading: preferencesLoading, refreshPreferences } = usePreferences()
   const [forceMainApp, setForceMainApp] = React.useState(false)
-  const [appPhase, setAppPhase] = React.useState<'demo' | 'choice' | 'auth' | 'main'>('demo')
+  const [appPhase, setAppPhase] = React.useState<'demo' | 'choice' | 'auth' | 'welcome' | 'main'>('demo')
   const [demoProgress, setDemoProgress] = React.useState({ totalXP: 0, completedHabits: 0 })
   const { isDarkTheme } = React.useContext(AppContext)
 
@@ -82,7 +84,19 @@ const AppContent = () => {
   // Determine app phase based on user state
   React.useEffect(() => {
     if (user) {
-      setAppPhase('main') // User is logged in, go to main app
+      // When user becomes authenticated
+      if (appPhase === 'auth') {
+        // User just completed authentication from auth flow
+        if (demoProgress.totalXP > 0 || demoProgress.completedHabits > 0) {
+          setAppPhase('welcome')
+        } else {
+          setAppPhase('main')
+        }
+      } else if (appPhase === 'demo' || appPhase === 'choice') {
+        // User was in demo/choice but is now authenticated (returning user)
+        setAppPhase('main')
+      }
+      // If already in welcome or main, don't change
     }
     // If no user and not explicitly set, stay in demo phase
   }, [user])
@@ -90,6 +104,8 @@ const AppContent = () => {
   // Add debug logging
   console.log('🔍 AppContent render:', {
     user: !!user,
+    appPhase,
+    demoProgress,
     onboardingCompleted,
     forceMainApp,
     loading,
@@ -123,6 +139,10 @@ const AppContent = () => {
   }
   
   const handleAuthComplete = () => {
+    // The useEffect will handle the phase transition when user state changes
+  }
+  
+  const handleWelcomeComplete = () => {
     setAppPhase('main')
   }
 
@@ -133,7 +153,7 @@ const AppContent = () => {
           <Stack.Screen 
             name="Demo" 
             children={(props) => (
-              <OnboardingScreen 
+              <DemoScreen 
                 {...props} 
                 onComplete={handleDemoComplete}
               />
@@ -169,6 +189,21 @@ const AppContent = () => {
               )}
             />
           </>
+        )
+      
+      case 'welcome':
+        return (
+          <Stack.Screen 
+            name="Welcome" 
+            children={(props) => (
+              <WelcomeScreen 
+                {...props}
+                totalXP={demoProgress.totalXP}
+                completedHabits={demoProgress.completedHabits}
+                onGetStarted={handleWelcomeComplete}
+              />
+            )}
+          />
         )
         
       case 'main':

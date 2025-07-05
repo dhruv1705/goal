@@ -349,10 +349,8 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
         user_id: user.id,
         primary_goal: selectedGoal?.id || 'custom',
         motivation_context: motivationContext,
-        // Note: time_commitment and selected_category columns may not exist yet
-        // Remove these if migration hasn't been applied:
-        // time_commitment: timeCommitment,
-        // selected_category: selectedCategory?.id || 'physical-health',
+        time_commitment: timeCommitment,
+        selected_category: selectedCategory?.id || 'physical-health',
         completed_at: new Date().toISOString()
       }
 

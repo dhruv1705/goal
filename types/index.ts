@@ -15,4 +15,8 @@ export type RootStackParamList = {
   GoalDetail: { goal: Goal }; 
   Feedback: undefined;
   Onboarding: { onComplete: () => void };
+  Demo: undefined;
+  Choice: undefined;
+  Welcome: undefined;
+  Talk: undefined;
 }; 

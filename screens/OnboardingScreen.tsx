@@ -7,127 +7,98 @@ import {
   ScrollView,
   StatusBar,
   Alert,
+  Dimensions,
 } from 'react-native'
-import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
+import { 
+  categoryTemplates, 
+  goalTemplates,
+  getGoalsByCategory,
+  getHabitsByGoal,
+  CategoryTemplate,
+  GoalTemplate,
+  HabitTemplate,
+  DemoExperience
+} from '../data/onboardingTemplates'
 import { BreathingExerciseModal } from '../components/BreathingExerciseModal'
 import { StretchExerciseModal } from '../components/StretchExerciseModal'
+import { GuestDataManager, GuestOnboardingData } from '../lib/guestDataManager'
 
+const { width } = Dimensions.get('window')
 
 interface OnboardingScreenProps {
   navigation: any
-  onComplete: (totalXP?: number, completedHabits?: number) => void
+  onComplete: () => void
 }
-
-
-interface GoalSpecificDemo {
-  id: string
-  label: string
-  icon: string
-  xp: number
-  type: 'stretch' | 'breathing' | 'expense' | 'gratitude' | 'mindfulness'
-  instruction: string
-  successMessage: string
-}
-
-const goalDemoMapping: Record<string, GoalSpecificDemo> = {
-  'health-transformation': {
-    id: 'stretch-demo',
-    label: 'Do a 2-minute stretch',
-    icon: '🤸‍♂️',
-    xp: 20,
-    type: 'stretch',
-    instruction: 'Let\'s wake up your body with some gentle stretches',
-    successMessage: 'Feel your body wake up! 💪'
-  },
-  'mental-wellness': {
-    id: 'breathing-demo',
-    label: 'Take 5 deep breaths',
-    icon: '🌬️',
-    xp: 15,
-    type: 'breathing',
-    instruction: 'Follow the breathing animation for calm',
-    successMessage: 'Notice the calm flowing through you 🧘‍♀️'
-  },
-  'financial-freedom': {
-    id: 'expense-demo',
-    label: 'Track a small expense',
-    icon: '💰',
-    xp: 10,
-    type: 'expense',
-    instruction: 'What did you spend on today?',
-    successMessage: 'Awareness is the first step to control! 💎'
-  },
-  'social-growth': {
-    id: 'gratitude-demo',
-    label: 'Express gratitude',
-    icon: '🤝',
-    xp: 15,
-    type: 'gratitude',
-    instruction: 'Think of someone who made your day better',
-    successMessage: 'Connection starts with gratitude 🌟'
-  },
-  'overall-balance': {
-    id: 'mindfulness-demo',
-    label: 'Check in with yourself',
-    icon: '⚖️',
-    xp: 10,
-    type: 'mindfulness',
-    instruction: 'How are you feeling right now?',
-    successMessage: 'Self-awareness creates balance 🌸'
-  }
-}
-
-const expenseOptions = [
-  { label: '$5 Coffee', value: 'coffee' },
-  { label: '$12 Lunch', value: 'lunch' },
-  { label: '$3 Snack', value: 'snack' },
-  { label: 'Other', value: 'other' }
-]
-
-const moodOptions = [
-  { label: 'Stressed 😰', value: 'stressed' },
-  { label: 'Balanced 😌', value: 'balanced' },
-  { label: 'Energized ⚡', value: 'energized' }
-]
-
-const primaryGoalOptions = [
-  { id: 'health-transformation', label: 'Transform my health and fitness', icon: '🏃‍♂️' },
-  { id: 'financial-freedom', label: 'Achieve financial stability', icon: '💎' },
-  { id: 'mental-wellness', label: 'Improve mental wellbeing', icon: '🧘‍♀️' },
-  { id: 'social-growth', label: 'Build better relationships', icon: '🤝' },
-  { id: 'overall-balance', label: 'Create overall life balance', icon: '⚖️' },
-]
 
 export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, onComplete }) => {
-  const [currentStep, setCurrentStep] = useState(0) // Start at 0 for goal selection
-  const [primaryGoal, setPrimaryGoal] = useState<string>('')
+  const [currentStep, setCurrentStep] = useState(0) // 0: Category, 1: Goal, 2: Demo, 3: Habits + Summary
+  const [selectedCategory, setSelectedCategory] = useState<CategoryTemplate | null>(null)
+  const [selectedGoal, setSelectedGoal] = useState<GoalTemplate | null>(null)
+  const [selectedHabits, setSelectedHabits] = useState<HabitTemplate[]>([])
+  const [motivationContext, setMotivationContext] = useState<string>('')
+  const [timeCommitment, setTimeCommitment] = useState<'light' | 'moderate' | 'intensive'>('moderate')
+  const [loading, setLoading] = useState(false)
+  
+  // Demo-related state
+  const [demoCompleted, setDemoCompleted] = useState(false)
+  const [demoXP, setDemoXP] = useState(0)
+  const [showBreathingModal, setShowBreathingModal] = useState(false)
+  const [showStretchModal, setShowStretchModal] = useState(false)
   const [selectedExpense, setSelectedExpense] = useState<string>('')
   const [gratitudePerson, setGratitudePerson] = useState<string>('')
   const [selectedMood, setSelectedMood] = useState<string>('')
-  const [motivationContext, setMotivationContext] = useState<string>('')
-  const [loading, setLoading] = useState(false)
-  const [demoCompleted, setDemoCompleted] = useState(false)
-  const [totalXP, setTotalXP] = useState(0)
-  const [completedDemo, setCompletedDemo] = useState<string | null>(null)
-  const [activeHabit, setActiveHabit] = useState<string | null>(null)
-  const [showBreathingModal, setShowBreathingModal] = useState(false)
-  const [showStretchModal, setShowStretchModal] = useState(false)
   
   const { user } = useAuth()
   const { updatePreferences, completeOnboardingLocally } = usePreferences()
   const insets = useSafeAreaInsets()
 
-  
+  const totalSteps = 4 // Category -> Goal -> Demo -> Habits + Summary
 
-  const totalSteps = 3 // Goal Selection -> Demo -> Summary
+  const timeCommitmentOptions = [
+    { 
+      id: 'light', 
+      label: 'Light', 
+      description: '15-30 min/day', 
+      icon: '🌱',
+      color: '#10B981'
+    },
+    { 
+      id: 'moderate', 
+      label: 'Moderate', 
+      description: '30-60 min/day', 
+      icon: '🌿',
+      color: '#3B82F6'
+    },
+    { 
+      id: 'intensive', 
+      label: 'Intensive', 
+      description: '60+ min/day', 
+      icon: '🌳',
+      color: '#8B5CF6'
+    }
+  ]
 
-  const getCurrentDemo = (): GoalSpecificDemo | null => {
-    if (!primaryGoal) return null
-    return goalDemoMapping[primaryGoal] || null
+  // Demo helper functions
+  const expenseOptions = [
+    { label: '$5 Coffee', value: 'coffee' },
+    { label: '$12 Lunch', value: 'lunch' },
+    { label: '$3 Snack', value: 'snack' },
+    { label: 'Other', value: 'other' }
+  ]
+
+  const moodOptions = [
+    { label: 'Stressed 😰', value: 'stressed' },
+    { label: 'Balanced 😌', value: 'balanced' },
+    { label: 'Energized ⚡', value: 'energized' }
+  ]
+
+  const getCurrentDemo = (): DemoExperience | null => {
+    if (!selectedGoal?.demoExperience) return null
+    return selectedGoal.demoExperience
   }
 
   const startGoalSpecificDemo = () => {
@@ -156,7 +127,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
   const showExpenseTracker = () => {
     Alert.alert(
       'Track Your Spending 💰',
-      'What did you spend on today?',
+      getCurrentDemo()?.instruction || 'What did you spend on today?',
       [
         ...expenseOptions.map(option => ({
           text: option.label,
@@ -173,7 +144,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
   const showGratitudeExercise = () => {
     Alert.prompt(
       'Express Gratitude 🤝',
-      'Think of someone who made your day better - who was it?',
+      getCurrentDemo()?.instruction || 'Think of someone who made your day better - who was it?',
       (text?: string) => {
         if (text && text.trim()) {
           setGratitudePerson(text)
@@ -189,7 +160,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
   const showMindfulnessCheck = () => {
     Alert.alert(
       'Check In With Yourself ⚖️',
-      'How are you feeling right now?',
+      getCurrentDemo()?.instruction || 'How are you feeling right now?',
       [
         ...moodOptions.map(option => ({
           text: option.label,
@@ -203,85 +174,11 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
     )
   }
 
-  const handleComplete = async () => {
-    if (!user) {
-      Alert.alert('Error', 'User not authenticated')
-      return
-    }
-
-    setLoading(true)
-    console.log('=== ONBOARDING COMPLETION STARTED ===')
-
-    try {
-      console.log('Starting onboarding completion...', {
-        userId: user.id,
-        primaryGoal,
-        completedDemo
-      })
-
-      // Save onboarding completion
-      const onboardingData = {
-        user_id: user.id,
-        primary_goal: primaryGoal,
-        motivation_context: motivationContext,
-      }
-
-      console.log('Saving onboarding data:', onboardingData)
-
-      const { error: onboardingError } = await supabase
-        .from('user_onboarding')
-        .upsert(onboardingData, { onConflict: 'user_id' })
-
-      if (onboardingError) {
-        console.error('Error saving onboarding:', onboardingError)
-        throw onboardingError
-      }
-
-      console.log('✅ Onboarding saved successfully')
-
-      // CRITICAL: Update local state first
-      console.log('🔄 Updating local onboarding state...')
-      completeOnboardingLocally()
-      
-      // Wait a moment for state to propagate
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
-      console.log('🚀 Calling onComplete callback...')
-      onComplete()
-      
-      console.log('=== ONBOARDING COMPLETION FINISHED ===')
-
-      // Show success message after navigation
-      setTimeout(() => {
-        Alert.alert(
-          'Welcome! 🎉',
-          'Your personalized experience is ready!',
-          [{ text: 'OK' }]
-        )
-      }, 1000)
-
-    } catch (error: any) {
-      console.error('❌ Error completing onboarding:', error)
-      Alert.alert(
-        'Setup Error',
-        `Failed to save your preferences: ${error.message || 'Unknown error'}. Would you like to try again?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Try Again', onPress: handleComplete }
-        ]
-      )
-    } finally {
-      setLoading(false)
-    }
-  }
-
-
   const completeDemoTask = () => {
     const demo = getCurrentDemo()
     if (!demo) return
     
-    setCompletedDemo(demo.id)
-    setTotalXP(demo.xp)
+    setDemoXP(demo.xpReward)
     setDemoCompleted(true)
     
     // Show success message
@@ -289,23 +186,20 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
       Alert.alert(
         'Well Done! 🎉',
         demo.successMessage,
-        [{ text: 'Continue', onPress: () => setCurrentStep(2) }]
+        [{ text: 'Continue', onPress: () => setCurrentStep(3) }]
       )
     }, 500)
   }
-  
-  
+
   const handleBreathingComplete = () => {
     setShowBreathingModal(false)
     completeDemoTask()
   }
 
   const handleBreathingCancel = async () => {
-    console.log('🔄 Onboarding: Breathing exercise cancelled')
     setShowBreathingModal(false)
-    setActiveHabit(null)
     
-    // Additional safety: Stop any voice that might be playing
+    // Stop any voice that might be playing
     try {
       const Speech = await import('expo-speech')
       await Speech.stop()
@@ -320,29 +214,209 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
   }
 
   const handleStretchCancel = async () => {
-    console.log('🔄 Onboarding: Stretch exercise cancelled')
     setShowStretchModal(false)
-    setActiveHabit(null)
     
-    // Additional safety: Stop any voice that might be playing
+    // Stop any voice that might be playing
     try {
       const Speech = await import('expo-speech')
       await Speech.stop()
     } catch (error) {
-      console.log('Error stopping speech in stretch onboarding:', error)
+      console.log('Error stopping speech in onboarding:', error)
     }
   }
 
-  
-  
+  const handleComplete = async () => {
+    if (!user) {
+      // Guest user - save onboarding data to AsyncStorage
+      console.log('=== GUEST ONBOARDING COMPLETION ===')
+      
+      try {
+        const guestData: GuestOnboardingData = {
+          selectedCategory,
+          selectedGoal,
+          selectedHabits,
+          timeCommitment,
+          motivationContext,
+          demoCompleted,
+          demoXP,
+          completedAt: new Date().toISOString()
+        }
 
-  const handleNext = () => {
-    if (currentStep === 0 && !primaryGoal) {
-      Alert.alert('Selection Required', 'Please select your primary goal to continue.')
+        console.log('Saving guest onboarding data:', {
+          category: selectedCategory?.name,
+          goal: selectedGoal?.title,
+          habitsCount: selectedHabits.length,
+          demoXP,
+          timeCommitment
+        })
+
+        // Save guest data to AsyncStorage
+        await GuestDataManager.saveGuestOnboarding(guestData)
+        await GuestDataManager.markGuestOnboardingCompleted()
+
+        console.log('✅ Guest onboarding data saved successfully')
+
+        setTimeout(() => {
+          Alert.alert(
+            'Progress Saved! 🎉',
+            `Amazing! You earned ${demoXP} XP and selected ${selectedHabits.length} habits. Your progress is saved - sign up to unlock the full experience!`,
+            [{ text: 'Continue to Sign Up!' }]
+          )
+        }, 500)
+
+      } catch (error) {
+        console.error('❌ Error saving guest onboarding data:', error)
+        
+        setTimeout(() => {
+          Alert.alert(
+            'Demo Complete! 🎉',
+            `You earned ${demoXP} XP and selected ${selectedHabits.length} habits. Sign up to save your progress!`,
+            [{ text: 'Continue!' }]
+          )
+        }, 500)
+      }
+      
+      onComplete()
       return
     }
-    if (currentStep === 1 && !demoCompleted) {
-      Alert.alert('Complete Demo', 'Please complete the demo task to continue.')
+
+    setLoading(true)
+    console.log('=== ENHANCED ONBOARDING COMPLETION STARTED ===')
+
+    try {
+      console.log('Starting enhanced onboarding completion...', {
+        userId: user.id,
+        selectedCategory: selectedCategory?.name,
+        selectedGoal: selectedGoal?.title,
+        selectedHabits: selectedHabits.map(h => h.title),
+        timeCommitment
+      })
+
+      // Create the primary goal in the database
+      const goalData = {
+        user_id: user.id,
+        title: selectedGoal?.title || 'My Primary Goal',
+        description: selectedGoal?.description || '',
+        category: selectedCategory?.name || 'Physical Health',
+        status: 'active'
+      }
+
+      console.log('Creating goal:', goalData)
+      const { data: createdGoal, error: goalError } = await supabase
+        .from('goals')
+        .insert(goalData)
+        .select()
+        .single()
+
+      if (goalError) {
+        console.error('Error creating goal:', goalError)
+        throw goalError
+      }
+
+      console.log('✅ Goal created successfully:', createdGoal.id)
+
+      // Create initial habits/schedules linked to the goal
+      const today = new Date()
+      const schedulePromises = selectedHabits.map(async (habit, index) => {
+        const scheduleDate = new Date(today)
+        scheduleDate.setDate(today.getDate() + index) // Spread over next few days
+
+        const scheduleData = {
+          user_id: user.id,
+          goal_id: createdGoal.id,
+          title: habit.title,
+          description: habit.description,
+          schedule_date: scheduleDate.toISOString().split('T')[0],
+          schedule_time: index === 0 ? '09:00' : index === 1 ? '18:00' : '12:00', // Spread across day
+          completed: false,
+          priority: 'medium'
+        }
+
+        return supabase.from('schedules').insert(scheduleData)
+      })
+
+      const scheduleResults = await Promise.all(schedulePromises)
+      const scheduleErrors = scheduleResults.filter(result => result.error)
+      
+      if (scheduleErrors.length > 0) {
+        console.error('Some schedules failed to create:', scheduleErrors)
+      } else {
+        console.log('✅ All initial schedules created successfully')
+      }
+
+      // Save onboarding completion with enhanced data
+      const onboardingData = {
+        user_id: user.id,
+        primary_goal: selectedGoal?.id || 'custom',
+        motivation_context: motivationContext,
+        time_commitment: timeCommitment,
+        selected_category: selectedCategory?.id || 'physical-health',
+        completed_at: new Date().toISOString()
+      }
+
+      console.log('Saving enhanced onboarding data:', onboardingData)
+      const { error: onboardingError } = await supabase
+        .from('user_onboarding')
+        .upsert(onboardingData, { onConflict: 'user_id' })
+
+      if (onboardingError) {
+        console.error('Error saving onboarding:', onboardingError)
+        throw onboardingError
+      }
+
+      console.log('✅ Enhanced onboarding saved successfully')
+
+      // Update local preferences
+      console.log('🔄 Updating local onboarding state...')
+      completeOnboardingLocally()
+      
+      // Wait a moment for state to propagate
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      console.log('🚀 Calling onComplete callback...')
+      onComplete()
+      
+      console.log('=== ENHANCED ONBOARDING COMPLETION FINISHED ===')
+
+      // Show success message after navigation
+      setTimeout(() => {
+        Alert.alert(
+          'Welcome! 🎉',
+          `Your ${selectedGoal?.title || 'goal'} journey is ready! You have ${selectedHabits.length} habits set up to get started.`,
+          [{ text: 'Let\'s Go!' }]
+        )
+      }, 1000)
+
+    } catch (error: any) {
+      console.error('❌ Error completing enhanced onboarding:', error)
+      Alert.alert(
+        'Setup Error',
+        `Failed to save your preferences: ${error.message || 'Unknown error'}. Would you like to try again?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Try Again', onPress: handleComplete }
+        ]
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleNext = () => {
+    if (currentStep === 0 && !selectedCategory) {
+      Alert.alert('Selection Required', 'Please select a category to continue.')
+      return
+    }
+    if (currentStep === 1 && !selectedGoal) {
+      Alert.alert('Selection Required', 'Please select a goal to continue.')
+      return
+    }
+    if (currentStep === 2 && !demoCompleted) {
+      Alert.alert('Complete Demo', 'Please complete the demo experience to continue.')
+      return
+    }
+    if (currentStep === 3 && selectedHabits.length === 0) {
+      Alert.alert('Selection Required', 'Please select at least one habit to continue.')
       return
     }
     
@@ -364,39 +438,64 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
     )
   }
 
+  const toggleHabitSelection = (habit: HabitTemplate) => {
+    setSelectedHabits(prev => {
+      const isSelected = prev.some(h => h.id === habit.id)
+      if (isSelected) {
+        return prev.filter(h => h.id !== habit.id)
+      } else {
+        return [...prev, habit]
+      }
+    })
+  }
+
   const renderProgressBar = () => (
     <View style={styles.progressContainer}>
       <View style={styles.progressBackground}>
-        <View style={[styles.progressFill, { width: `${(currentStep / totalSteps) * 100}%` }]} />
+        <View style={[styles.progressFill, { width: `${((currentStep + 1) / totalSteps) * 100}%` }]} />
       </View>
-      <Text style={styles.progressText}>{currentStep} of {totalSteps}</Text>
+      <Text style={styles.progressText}>{currentStep + 1} of {totalSteps}</Text>
     </View>
   )
 
   const renderStep0 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>What's your main goal? 🎯</Text>
+      <Text style={styles.stepTitle}>Choose Your Focus Area 🎯</Text>
       <Text style={styles.stepSubtitle}>
-        Choose your primary focus area to get started with a personalized experience
+        What aspect of your life would you like to improve most?
       </Text>
 
       <View style={styles.optionsContainer}>
-        {primaryGoalOptions.map((option) => (
+        {categoryTemplates.map((category) => (
           <TouchableOpacity
-            key={option.id}
+            key={category.id}
             style={[
-              styles.goalOption,
-              primaryGoal === option.id && styles.goalOptionSelected
+              styles.categoryOption,
+              selectedCategory?.id === category.id && styles.categoryOptionSelected
             ]}
-            onPress={() => setPrimaryGoal(option.id)}
+            onPress={() => setSelectedCategory(category)}
           >
-            <Text style={styles.goalIcon}>{option.icon}</Text>
-            <Text style={[
-              styles.goalLabel,
-              primaryGoal === option.id && styles.goalLabelSelected
-            ]}>
-              {option.label}
-            </Text>
+            <View style={styles.categoryHeader}>
+              <View style={[styles.categoryIconContainer, { backgroundColor: category.color }]}>
+                <Text style={styles.categoryIcon}>{category.icon}</Text>
+              </View>
+              <View style={styles.categoryTextContainer}>
+                <Text style={[
+                  styles.categoryLabel,
+                  selectedCategory?.id === category.id && styles.categoryLabelSelected
+                ]}>
+                  {category.name}
+                </Text>
+                <Text style={styles.categoryDescription}>{category.description}</Text>
+              </View>
+            </View>
+            
+            <View style={styles.benefitsContainer}>
+              <Text style={styles.benefitsTitle}>Benefits:</Text>
+              {category.benefits.slice(0, 2).map((benefit, index) => (
+                <Text key={index} style={styles.benefitItem}>• {benefit}</Text>
+              ))}
+            </View>
           </TouchableOpacity>
         ))}
       </View>
@@ -404,14 +503,84 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
   )
 
   const renderStep1 = () => {
-    const demo = getCurrentDemo()
-    if (!demo) return null
+    if (!selectedCategory) return null
+    const availableGoals = getGoalsByCategory(selectedCategory.id)
 
     return (
       <View style={styles.stepContainer}>
-        <Text style={styles.stepTitle}>Let's try something! 🎆</Text>
+        <Text style={styles.stepTitle}>Select Your Goal 🏆</Text>
         <Text style={styles.stepSubtitle}>
-          Experience a habit that aligns with your goal: {primaryGoalOptions.find(g => g.id === primaryGoal)?.label}
+          Choose a specific goal within {selectedCategory.name}
+        </Text>
+
+        <View style={styles.optionsContainer}>
+          {availableGoals.map((goal) => (
+            <TouchableOpacity
+              key={goal.id}
+              style={[
+                styles.goalOption,
+                selectedGoal?.id === goal.id && styles.goalOptionSelected
+              ]}
+              onPress={() => setSelectedGoal(goal)}
+            >
+              <View style={styles.goalHeader}>
+                <Text style={styles.goalIcon}>{goal.icon}</Text>
+                <View style={styles.goalTextContainer}>
+                  <Text style={[
+                    styles.goalTitle,
+                    selectedGoal?.id === goal.id && styles.goalTitleSelected
+                  ]}>
+                    {goal.title}
+                  </Text>
+                  <Text style={styles.goalDescription}>{goal.description}</Text>
+                </View>
+                <View style={[styles.difficultyBadge, getDifficultyStyle(goal.difficulty)]}>
+                  <Text style={styles.difficultyText}>
+                    {goal.difficulty.charAt(0).toUpperCase() + goal.difficulty.slice(1)}
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={styles.goalDetails}>
+                <Text style={styles.estimatedDuration}>🕐 {goal.estimatedDuration}</Text>
+                <Text style={styles.benefitsPreview}>
+                  ✨ {goal.benefits.slice(0, 2).join(', ')}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    )
+  }
+
+  const renderStep2 = () => {
+    if (!selectedGoal) return null
+    const demo = getCurrentDemo()
+    
+    if (!demo) {
+      // If no demo available, skip to habits step
+      return (
+        <View style={styles.stepContainer}>
+          <Text style={styles.stepTitle}>No Demo Available 📝</Text>
+          <Text style={styles.stepSubtitle}>
+            This goal doesn't have a demo experience yet. Let's proceed to select your habits!
+          </Text>
+          <TouchableOpacity
+            style={styles.skipDemoButton}
+            onPress={() => setCurrentStep(3)}
+          >
+            <Text style={styles.skipDemoText}>Continue to Habits</Text>
+          </TouchableOpacity>
+        </View>
+      )
+    }
+
+    return (
+      <View style={styles.stepContainer}>
+        <Text style={styles.stepTitle}>Try This Experience! 🎆</Text>
+        <Text style={styles.stepSubtitle}>
+          Get a taste of your goal: {selectedGoal.title}
         </Text>
 
         <View style={styles.demoContainer}>
@@ -424,7 +593,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
             disabled={demoCompleted}
           >
             <View style={styles.demoIcon}>
-              <Text style={styles.demoEmoji}>{demo.icon}</Text>
+              <Text style={styles.demoEmoji}>{selectedGoal.icon}</Text>
             </View>
             
             <View style={styles.demoContent}>
@@ -432,15 +601,15 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
                 styles.demoLabel,
                 demoCompleted && styles.demoLabelCompleted
               ]}>
-                {demo.label}
+                {demo.instruction}
               </Text>
               <Text style={styles.demoInstruction}>
-                {demo.instruction}
+                Tap to start your {selectedGoal.title.toLowerCase()} experience
               </Text>
             </View>
             
             <View style={styles.demoXP}>
-              <Text style={styles.demoXPText}>+{demo.xp} XP</Text>
+              <Text style={styles.demoXPText}>+{demo.xpReward} XP</Text>
             </View>
             
             {demoCompleted && (
@@ -453,7 +622,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
           {demoCompleted && (
             <View style={styles.demoSuccessContainer}>
               <Text style={styles.demoSuccessText}>
-                🎉 Great job! You earned {totalXP} XP. Ready to build your personalized habit journey?
+                🎉 Excellent! You earned {demoXP} XP. Ready to build lasting habits?
               </Text>
             </View>
           )}
@@ -462,54 +631,250 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
     )
   }
 
-  const renderStep2 = () => {
-    const goalOption = primaryGoalOptions.find(g => g.id === primaryGoal)
-    const demo = getCurrentDemo()
+  const renderStep3 = () => {
+    if (!selectedGoal) return null
+    const availableHabits = getHabitsByGoal(selectedGoal.id)
+
+    return (
+      <View style={styles.stepContainer}>
+        <Text style={styles.stepTitle}>Choose Your Habits 📝</Text>
+        <Text style={styles.stepSubtitle}>
+          Select habits that will help you achieve: {selectedGoal.title}
+        </Text>
+
+        {/* Time Commitment Selector */}
+        <View style={styles.timeCommitmentContainer}>
+          <Text style={styles.timeCommitmentTitle}>Time Commitment:</Text>
+          <View style={styles.timeCommitmentOptions}>
+            {timeCommitmentOptions.map((option) => (
+              <TouchableOpacity
+                key={option.id}
+                style={[
+                  styles.timeCommitmentOption,
+                  timeCommitment === option.id && { backgroundColor: option.color }
+                ]}
+                onPress={() => setTimeCommitment(option.id as any)}
+              >
+                <Text style={styles.timeCommitmentIcon}>{option.icon}</Text>
+                <Text style={[
+                  styles.timeCommitmentLabel,
+                  timeCommitment === option.id && { color: '#FFFFFF' }
+                ]}>
+                  {option.label}
+                </Text>
+                <Text style={[
+                  styles.timeCommitmentDesc,
+                  timeCommitment === option.id && { color: '#E5E7EB' }
+                ]}>
+                  {option.description}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Habit Selection */}
+        <View style={styles.habitsContainer}>
+          <Text style={styles.habitsTitle}>Available Habits:</Text>
+          {availableHabits.map((habit) => {
+            const isSelected = selectedHabits.some(h => h.id === habit.id)
+            return (
+              <TouchableOpacity
+                key={habit.id}
+                style={[
+                  styles.habitOption,
+                  isSelected && styles.habitOptionSelected
+                ]}
+                onPress={() => toggleHabitSelection(habit)}
+              >
+                <View style={styles.habitHeader}>
+                  <Text style={styles.habitIcon}>{habit.icon}</Text>
+                  <View style={styles.habitTextContainer}>
+                    <Text style={[
+                      styles.habitTitle,
+                      isSelected && styles.habitTitleSelected
+                    ]}>
+                      {habit.title}
+                    </Text>
+                    <Text style={styles.habitDescription}>{habit.description}</Text>
+                  </View>
+                  <View style={styles.habitMeta}>
+                    <Text style={styles.habitFrequency}>
+                      {habit.defaultTimes}x {habit.frequency}
+                    </Text>
+                    <Text style={styles.habitXP}>+{habit.xpReward} XP</Text>
+                  </View>
+                </View>
+                
+                {isSelected && (
+                  <View style={styles.selectedIndicator}>
+                    <Text style={styles.selectedIndicatorText}>✓ Selected</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )
+          })}
+        </View>
+
+        <Text style={styles.habitSelectionNote}>
+          💡 You can always add or remove habits later in the main app
+        </Text>
+
+        {/* Summary Section - shown once habits are selected */}
+        {selectedHabits.length > 0 && (
+          <View style={styles.summarySection}>
+            <Text style={styles.summaryTitle}>Ready to Start! 🚀</Text>
+            
+            <View style={styles.summaryContainer}>
+              {/* Demo Summary */}
+              {demoCompleted && (
+                <View style={styles.summaryCard}>
+                  <Text style={styles.summaryCardTitle}>Demo Completed</Text>
+                  <View style={styles.summaryItem}>
+                    <View style={[styles.summaryIconContainer, { backgroundColor: selectedCategory?.color }]}>
+                      <Text style={styles.summaryIcon}>{selectedGoal?.icon}</Text>
+                    </View>
+                    <View style={styles.summaryContent}>
+                      <Text style={styles.summaryName}>Experience: {selectedGoal?.title}</Text>
+                      <Text style={styles.summaryDesc}>+{demoXP} XP earned</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* Habits Summary */}
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryCardTitle}>Your Habits ({selectedHabits.length})</Text>
+                {selectedHabits.slice(0, 3).map((habit) => (
+                  <View key={habit.id} style={styles.summaryHabitItem}>
+                    <Text style={styles.summaryHabitIcon}>{habit.icon}</Text>
+                    <View style={styles.summaryHabitContent}>
+                      <Text style={styles.summaryHabitName}>{habit.title}</Text>
+                      <Text style={styles.summaryHabitFreq}>
+                        {habit.defaultTimes}x {habit.frequency} • +{habit.xpReward} XP
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+                {selectedHabits.length > 3 && (
+                  <Text style={styles.moreHabitsText}>
+                    +{selectedHabits.length - 3} more habits
+                  </Text>
+                )}
+              </View>
+
+              {/* Stats Summary */}
+              <View style={styles.statsCard}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{selectedHabits.length}</Text>
+                  <Text style={styles.statLabel}>Habits</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{demoXP + selectedHabits.reduce((sum, habit) => sum + habit.xpReward, 0)}</Text>
+                  <Text style={styles.statLabel}>Total XP</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{timeCommitment}</Text>
+                  <Text style={styles.statLabel}>Pace</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
+    )
+  }
+
+  const renderStep4 = () => {
+    const totalHabitsXP = selectedHabits.reduce((sum, habit) => sum + habit.xpReward, 0)
+    const totalXP = demoXP + totalHabitsXP
     
     return (
       <View style={styles.stepContainer}>
-        <Text style={styles.stepTitle}>You're all set! 🎉</Text>
+        <Text style={styles.stepTitle}>You're Ready! 🚀</Text>
         <Text style={styles.stepSubtitle}>
-          You've experienced a habit that aligns with your goal. Let's build your personalized journey!
+          Review your personalized habit plan
         </Text>
 
         <View style={styles.summaryContainer}>
+          {/* Category Summary */}
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Your Goal:</Text>
+            <Text style={styles.summaryCardTitle}>Focus Area</Text>
             <View style={styles.summaryItem}>
-              <View style={styles.summaryIcon}>
-                <Text style={styles.summaryEmoji}>{goalOption?.icon}</Text>
+              <View style={[styles.summaryIconContainer, { backgroundColor: selectedCategory?.color }]}>
+                <Text style={styles.summaryIcon}>{selectedCategory?.icon}</Text>
               </View>
               <View style={styles.summaryContent}>
-                <Text style={styles.summaryName}>{goalOption?.label}</Text>
-                <Text style={styles.summaryDesc}>Your primary focus area</Text>
+                <Text style={styles.summaryName}>{selectedCategory?.name}</Text>
+                <Text style={styles.summaryDesc}>{selectedCategory?.description}</Text>
               </View>
             </View>
-            
-            {demoCompleted && demo && (
-              <View style={styles.demoSummaryItem}>
-                <Text style={styles.demoSummaryTitle}>Demo Completed:</Text>
-                <View style={styles.demoSummaryRow}>
-                  <Text style={styles.demoSummaryEmoji}>{demo.icon}</Text>
-                  <Text style={styles.demoSummaryText}>{demo.label}</Text>
-                  <Text style={styles.demoSummaryXP}>+{totalXP} XP</Text>
-                </View>
-              </View>
-            )}
           </View>
 
-          <View style={styles.benefitsContainer}>
-            <Text style={styles.benefitsTitle}>What's next:</Text>
-            <Text style={styles.benefitItem}>✨ Goal-specific habit recommendations</Text>
-            <Text style={styles.benefitItem}>🎯 Personalized progress tracking</Text>
-            <Text style={styles.benefitItem}>📊 Smart reminders and motivation</Text>
-            <Text style={styles.benefitItem}>🔄 Adaptive challenges based on your goal</Text>
+          {/* Goal Summary */}
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryCardTitle}>Your Goal</Text>
+            <View style={styles.summaryItem}>
+              <View style={styles.summaryIconContainer}>
+                <Text style={styles.summaryIcon}>{selectedGoal?.icon}</Text>
+              </View>
+              <View style={styles.summaryContent}>
+                <Text style={styles.summaryName}>{selectedGoal?.title}</Text>
+                <Text style={styles.summaryDesc}>
+                  {selectedGoal?.difficulty} • {selectedGoal?.estimatedDuration}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Habits Summary */}
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryCardTitle}>Your Habits ({selectedHabits.length})</Text>
+            {selectedHabits.map((habit) => (
+              <View key={habit.id} style={styles.summaryHabitItem}>
+                <Text style={styles.summaryHabitIcon}>{habit.icon}</Text>
+                <View style={styles.summaryHabitContent}>
+                  <Text style={styles.summaryHabitName}>{habit.title}</Text>
+                  <Text style={styles.summaryHabitFreq}>
+                    {habit.defaultTimes}x {habit.frequency} • +{habit.xpReward} XP
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* Stats Summary */}
+          <View style={styles.statsCard}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{selectedHabits.length}</Text>
+              <Text style={styles.statLabel}>Habits</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{totalXP}</Text>
+              <Text style={styles.statLabel}>XP/day</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{timeCommitment}</Text>
+              <Text style={styles.statLabel}>Commitment</Text>
+            </View>
           </View>
         </View>
       </View>
     )
   }
 
+  const getDifficultyStyle = (difficulty: string) => {
+    switch (difficulty) {
+      case 'beginner':
+        return { backgroundColor: '#10B981' }
+      case 'intermediate':
+        return { backgroundColor: '#F59E0B' }
+      case 'advanced':
+        return { backgroundColor: '#EF4444' }
+      default:
+        return { backgroundColor: '#6B7280' }
+    }
+  }
 
   const renderCurrentStep = () => {
     switch (currentStep) {
@@ -519,6 +884,8 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
         return renderStep1()
       case 2:
         return renderStep2()
+      case 3:
+        return renderStep3() // Habits + Summary combined
       default:
         return renderStep0()
     }
@@ -533,7 +900,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
         <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Welcome!</Text>
+        <Text style={styles.headerTitle}>Setup Your Goals</Text>
         <View style={styles.skipPlaceholder} />
       </View>
 
@@ -570,45 +937,18 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
           disabled={loading}
         >
           <Text style={styles.nextButtonText}>
-            {loading ? 'Setting up...' : currentStep === totalSteps - 1 ? 'Get Started' : 'Next'}
+            {loading ? 'Setting up...' : currentStep === totalSteps - 1 ? 'Complete Setup' : 'Next'}
           </Text>
         </TouchableOpacity>
-        
-        {/* Debug: Add a skip button for testing */}
-        {currentStep === totalSteps - 1 && (
-          <TouchableOpacity
-            style={[styles.nextButton, { backgroundColor: '#6B7280', marginTop: 8 }]}
-            onPress={() => {
-              Alert.alert(
-                'Skip Setup',
-                'Skip for now and use default settings?',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { 
-                    text: 'Skip', 
-                    onPress: () => {
-                      console.log('Skipping onboarding setup')
-                      completeOnboardingLocally()
-                      onComplete()
-                    }
-                  }
-                ]
-              )
-            }}
-          >
-            <Text style={styles.nextButtonText}>Skip for Now</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
-      {/* Full-screen breathing modal */}
+      {/* Demo Modals */}
       <BreathingExerciseModal
         visible={showBreathingModal}
         onComplete={handleBreathingComplete}
         onCancel={handleBreathingCancel}
       />
 
-      {/* Full-screen stretch modal */}
       <StretchExerciseModal
         visible={showStretchModal}
         onComplete={handleStretchComplete}
@@ -686,133 +1026,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: 'center',
   },
-  demoContainer: {
-    alignItems: 'center',
-    marginTop: 32,
-  },
-  demoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 24,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    marginBottom: 20,
-    width: '100%',
-  },
-  demoCardCompleted: {
-    borderColor: '#10B981',
-    backgroundColor: '#F0FDF4',
-  },
-  demoIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  demoEmoji: {
-    fontSize: 28,
-  },
-  demoContent: {
-    flex: 1,
-  },
-  demoLabel: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 6,
-  },
-  demoLabelCompleted: {
-    color: '#059669',
-  },
-  demoInstruction: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-  },
-  demoXP: {
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginLeft: 8,
-  },
-  demoXPText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#D97706',
-  },
-  demoSuccessContainer: {
-    backgroundColor: '#F0FDF4',
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#10B981',
-    width: '100%',
-  },
-  demoSuccessText: {
-    fontSize: 16,
-    color: '#065F46',
-    textAlign: 'center',
-    fontWeight: '600',
-    lineHeight: 24,
-  },
-  demoSummaryItem: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  demoSummaryTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  demoSummaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  demoSummaryEmoji: {
-    fontSize: 20,
-  },
-  demoSummaryText: {
-    fontSize: 16,
-    color: '#1F2937',
-    flex: 1,
-  },
-  demoSummaryXP: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#D97706',
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  completedBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#10B981',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  completedBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
   stepSubtitle: {
     fontSize: 16,
     color: '#6B7280',
@@ -821,37 +1034,267 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   optionsContainer: {
-    gap: 12,
+    gap: 16,
   },
-  goalOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
+  
+  // Category Selection Styles
+  categoryOption: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
+    padding: 20,
     borderWidth: 2,
     borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  categoryOptionSelected: {
+    borderColor: '#7C3AED',
+    backgroundColor: '#F8F9FF',
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  categoryIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  categoryIcon: {
+    fontSize: 24,
+    color: '#FFFFFF',
+  },
+  categoryTextContainer: {
+    flex: 1,
+  },
+  categoryLabel: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  categoryLabelSelected: {
+    color: '#7C3AED',
+  },
+  categoryDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  benefitsContainer: {
+    marginTop: 8,
+  },
+  benefitsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 6,
+  },
+  benefitItem: {
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 18,
+  },
+
+  // Goal Selection Styles
+  goalOption: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   goalOptionSelected: {
     borderColor: '#7C3AED',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F8F9FF',
+  },
+  goalHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
   goalIcon: {
     fontSize: 24,
     marginRight: 16,
+    marginTop: 4,
   },
-  goalLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#374151',
+  goalTextContainer: {
     flex: 1,
   },
-  goalLabelSelected: {
+  goalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 6,
+  },
+  goalTitleSelected: {
+    color: '#7C3AED',
+  },
+  goalDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  difficultyBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginLeft: 12,
+  },
+  difficultyText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  goalDetails: {
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  estimatedDuration: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  benefitsPreview: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+
+  // Time Commitment Styles
+  timeCommitmentContainer: {
+    marginBottom: 24,
+  },
+  timeCommitmentTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  timeCommitmentOptions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  timeCommitmentOption: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  timeCommitmentIcon: {
+    fontSize: 20,
+    marginBottom: 8,
+  },
+  timeCommitmentLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  timeCommitmentDesc: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+
+  // Habit Selection Styles
+  habitsContainer: {
+    marginTop: 8,
+  },
+  habitsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 16,
+  },
+  habitOption: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+  },
+  habitOptionSelected: {
+    borderColor: '#7C3AED',
+    backgroundColor: '#F8F9FF',
+  },
+  habitHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  habitIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  habitTextContainer: {
+    flex: 1,
+  },
+  habitTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  habitTitleSelected: {
+    color: '#7C3AED',
+  },
+  habitDescription: {
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 18,
+  },
+  habitMeta: {
+    alignItems: 'flex-end',
+  },
+  habitFrequency: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  habitXP: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#F59E0B',
+  },
+  selectedIndicator: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  selectedIndicatorText: {
+    fontSize: 13,
     color: '#7C3AED',
     fontWeight: '600',
+    textAlign: 'center',
   },
+  habitSelectionNote: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 16,
+  },
+
+  // Summary Styles
   summaryContainer: {
-    gap: 24,
+    gap: 16,
   },
   summaryCard: {
     backgroundColor: '#FFFFFF',
@@ -860,26 +1303,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-  summaryTitle: {
-    fontSize: 18,
+  summaryCardTitle: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   summaryItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
   },
-  summaryIcon: {
+  summaryIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
-  summaryEmoji: {
+  summaryIcon: {
     fontSize: 16,
   },
   summaryContent: {
@@ -895,23 +1338,53 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
   },
-  benefitsContainer: {
-    backgroundColor: '#F0F9FF',
+  summaryHabitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  summaryHabitIcon: {
+    fontSize: 16,
+    marginRight: 12,
+  },
+  summaryHabitContent: {
+    flex: 1,
+  },
+  summaryHabitName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  summaryHabitFreq: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  statsCard: {
+    backgroundColor: '#7C3AED',
     borderRadius: 16,
     padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
   },
-  benefitsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 12,
+  statItem: {
+    alignItems: 'center',
   },
-  benefitItem: {
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 8,
-    lineHeight: 20,
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 4,
   },
+  statLabel: {
+    fontSize: 12,
+    color: '#E5E7EB',
+    fontWeight: '500',
+  },
+
+  // Bottom Actions
   bottomActions: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -952,5 +1425,136 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+
+  // Demo Styles
+  demoContainer: {
+    alignItems: 'center',
+    marginTop: 32,
+  },
+  demoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: 20,
+    width: '100%',
+  },
+  demoCardCompleted: {
+    borderColor: '#10B981',
+    backgroundColor: '#F0FDF4',
+  },
+  demoIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  demoEmoji: {
+    fontSize: 28,
+  },
+  demoContent: {
+    flex: 1,
+  },
+  demoLabel: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 6,
+  },
+  demoLabelCompleted: {
+    color: '#059669',
+  },
+  demoInstruction: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  demoXP: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  demoXPText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#D97706',
+  },
+  completedBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#10B981',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    top: 12,
+    right: 12,
+  },
+  completedBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  demoSuccessContainer: {
+    backgroundColor: '#F0FDF4',
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#10B981',
+    width: '100%',
+  },
+  demoSuccessText: {
+    fontSize: 16,
+    color: '#065F46',
+    textAlign: 'center',
+    fontWeight: '600',
+    lineHeight: 24,
+  },
+  skipDemoButton: {
+    backgroundColor: '#7C3AED',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 32,
+  },
+  skipDemoText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  summarySection: {
+    marginTop: 32,
+    paddingTop: 24,
+    borderTopWidth: 2,
+    borderTopColor: '#E5E7EB',
+  },
+  summaryTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  moreHabitsText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 8,
   },
 })

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
+import { GuestDataManager, GuestOnboardingData } from '../lib/guestDataManager'
 
 export interface UserPreference {
   id: string
@@ -43,6 +44,8 @@ interface PreferencesContextType {
   getOrderedCategories: () => CategoryPriority[]
   markOnboardingComplete: (data: { primary_goal: string; motivation_context?: string }) => Promise<void>
   completeOnboardingLocally: () => void
+  transferGuestDataToUser: () => Promise<boolean>
+  checkAndTransferGuestData: () => Promise<boolean>
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined)
@@ -243,6 +246,175 @@ export const PreferencesProvider: React.FC<PreferencesProviderProps> = ({ childr
     setOnboardingCompleted(true)
   }
 
+  const transferGuestDataToUser = async (): Promise<boolean> => {
+    if (!user) {
+      console.log('❌ No authenticated user for guest data transfer')
+      return false
+    }
+
+    try {
+      console.log('🔄 Starting guest data transfer to authenticated user...')
+      
+      // Get guest onboarding data
+      const guestData = await GuestDataManager.getGuestOnboarding()
+      if (!guestData) {
+        console.log('No guest onboarding data found')
+        return false
+      }
+
+      console.log('📦 Found guest data:', {
+        category: guestData.selectedCategory?.name,
+        goal: guestData.selectedGoal?.title,
+        habitsCount: guestData.selectedHabits?.length || 0,
+        demoXP: guestData.demoXP
+      })
+
+      // 1. Create goal in database
+      let createdGoal = null
+      if (guestData.selectedGoal) {
+        const goalData = {
+          user_id: user.id,
+          title: guestData.selectedGoal.title,
+          description: guestData.selectedGoal.description,
+          category: guestData.selectedCategory?.name || 'Physical Health',
+          status: 'active'
+        }
+
+        const { data: goalResult, error: goalError } = await supabase
+          .from('goals')
+          .insert(goalData)
+          .select()
+          .single()
+
+        if (goalError) {
+          console.error('Error creating goal from guest data:', goalError)
+          throw goalError
+        }
+
+        createdGoal = goalResult
+        console.log('✅ Goal created from guest data:', createdGoal.id)
+      }
+
+      // 2. Create schedules/habits linked to the goal
+      if (createdGoal && guestData.selectedHabits && guestData.selectedHabits.length > 0) {
+        const today = new Date()
+        const schedulePromises = guestData.selectedHabits.map(async (habit, index) => {
+          const scheduleDate = new Date(today)
+          scheduleDate.setDate(today.getDate() + index)
+
+          const scheduleData = {
+            user_id: user.id,
+            goal_id: createdGoal.id,
+            title: habit.title,
+            description: habit.description,
+            schedule_date: scheduleDate.toISOString().split('T')[0],
+            schedule_time: index === 0 ? '09:00' : index === 1 ? '18:00' : '12:00',
+            completed: false,
+            priority: 'medium'
+          }
+
+          return supabase.from('schedules').insert(scheduleData)
+        })
+
+        const scheduleResults = await Promise.all(schedulePromises)
+        const scheduleErrors = scheduleResults.filter(result => result.error)
+        
+        if (scheduleErrors.length === 0) {
+          console.log('✅ All schedules created from guest habits')
+        } else {
+          console.error('Some schedules failed to create:', scheduleErrors)
+        }
+      }
+
+      // 3. Set category preferences based on guest selection
+      if (guestData.selectedCategory) {
+        const categoryPreferences = Object.keys(CATEGORY_INFO).map(category => ({
+          user_id: user.id,
+          category,
+          priority_score: category === guestData.selectedCategory?.name ? 100 : 25,
+          is_primary: category === guestData.selectedCategory?.name,
+        }))
+
+        const { error: prefError } = await supabase
+          .from('user_preferences')
+          .upsert(categoryPreferences, { onConflict: 'user_id,category' })
+
+        if (prefError) {
+          console.error('Error setting category preferences:', prefError)
+        } else {
+          console.log('✅ Category preferences set from guest data')
+        }
+      }
+
+      // 4. Mark onboarding as complete with enhanced data
+      const onboardingData = {
+        user_id: user.id,
+        primary_goal: guestData.selectedGoal?.id || 'transferred-from-guest',
+        motivation_context: guestData.motivationContext || 'Transferred from guest experience',
+        time_commitment: guestData.timeCommitment,
+        selected_category: guestData.selectedCategory?.id || 'physical-health',
+        completed_at: new Date().toISOString()
+      }
+
+      const { error: onboardingError } = await supabase
+        .from('user_onboarding')
+        .upsert(onboardingData, { onConflict: 'user_id' })
+
+      if (onboardingError) {
+        console.error('Error saving onboarding from guest data:', onboardingError)
+        throw onboardingError
+      }
+
+      console.log('✅ Onboarding completed with guest data')
+
+      // 5. Update local state
+      setOnboardingCompleted(true)
+
+      // 6. Clear guest data after successful transfer
+      await GuestDataManager.clearGuestOnboardingData()
+      console.log('✅ Guest data cleared after successful transfer')
+
+      // 7. Refresh preferences to get updated data
+      await refreshPreferences()
+
+      console.log('🎉 Guest data transfer completed successfully!')
+      return true
+
+    } catch (error) {
+      console.error('❌ Error transferring guest data to user:', error)
+      
+      // If transfer fails, we should still clear guest data to prevent repeated failed attempts
+      try {
+        console.log('🧹 Clearing guest data due to transfer failure to prevent retry loops')
+        await GuestDataManager.clearGuestOnboardingData()
+      } catch (clearError) {
+        console.error('❌ Failed to clear guest data after transfer error:', clearError)
+      }
+      
+      return false
+    }
+  }
+
+  const checkAndTransferGuestData = async (): Promise<boolean> => {
+    if (!user) return false
+
+    try {
+      const hasGuestData = await GuestDataManager.hasGuestDataForTransfer()
+      
+      if (hasGuestData) {
+        console.log('🔍 Guest data detected for authenticated user - transferring...')
+        const transferred = await transferGuestDataToUser()
+        return transferred
+      } else {
+        console.log('No guest data found for transfer')
+        return false
+      }
+    } catch (error) {
+      console.error('Error checking for guest data:', error)
+      return false
+    }
+  }
+
   const refreshPreferences = async () => {
     await fetchPreferences()
   }
@@ -272,6 +444,8 @@ export const PreferencesProvider: React.FC<PreferencesProviderProps> = ({ childr
     getOrderedCategories,
     markOnboardingComplete,
     completeOnboardingLocally,
+    transferGuestDataToUser,
+    checkAndTransferGuestData,
   }
 
   return (

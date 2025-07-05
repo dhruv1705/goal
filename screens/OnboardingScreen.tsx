@@ -25,6 +25,7 @@ import {
 } from '../data/onboardingTemplates'
 import { BreathingExerciseModal } from '../components/BreathingExerciseModal'
 import { StretchExerciseModal } from '../components/StretchExerciseModal'
+import { GuestDataManager, GuestOnboardingData } from '../lib/guestDataManager'
 
 const { width } = Dimensions.get('window')
 
@@ -226,22 +227,54 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation, 
 
   const handleComplete = async () => {
     if (!user) {
-      // Guest user - just complete onboarding without database operations
+      // Guest user - save onboarding data to AsyncStorage
       console.log('=== GUEST ONBOARDING COMPLETION ===')
-      console.log('Guest user completed onboarding with:', {
-        selectedCategory: selectedCategory?.name,
-        selectedGoal: selectedGoal?.title,
-        selectedHabits: selectedHabits.map(h => h.title),
-        timeCommitment
-      })
       
-      setTimeout(() => {
-        Alert.alert(
-          'Demo Complete! 🎉',
-          `Amazing! You earned ${demoXP} XP and selected ${selectedHabits.length} habits. Sign up to save your progress and unlock the full experience!`,
-          [{ text: 'Continue Exploring!' }]
-        )
-      }, 500)
+      try {
+        const guestData: GuestOnboardingData = {
+          selectedCategory,
+          selectedGoal,
+          selectedHabits,
+          timeCommitment,
+          motivationContext,
+          demoCompleted,
+          demoXP,
+          completedAt: new Date().toISOString()
+        }
+
+        console.log('Saving guest onboarding data:', {
+          category: selectedCategory?.name,
+          goal: selectedGoal?.title,
+          habitsCount: selectedHabits.length,
+          demoXP,
+          timeCommitment
+        })
+
+        // Save guest data to AsyncStorage
+        await GuestDataManager.saveGuestOnboarding(guestData)
+        await GuestDataManager.markGuestOnboardingCompleted()
+
+        console.log('✅ Guest onboarding data saved successfully')
+
+        setTimeout(() => {
+          Alert.alert(
+            'Progress Saved! 🎉',
+            `Amazing! You earned ${demoXP} XP and selected ${selectedHabits.length} habits. Your progress is saved - sign up to unlock the full experience!`,
+            [{ text: 'Continue to Sign Up!' }]
+          )
+        }, 500)
+
+      } catch (error) {
+        console.error('❌ Error saving guest onboarding data:', error)
+        
+        setTimeout(() => {
+          Alert.alert(
+            'Demo Complete! 🎉',
+            `You earned ${demoXP} XP and selected ${selectedHabits.length} habits. Sign up to save your progress!`,
+            [{ text: 'Continue!' }]
+          )
+        }, 500)
+      }
       
       onComplete()
       return

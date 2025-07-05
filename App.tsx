@@ -21,7 +21,7 @@ import { FeedbackScreen } from './screens/FeedbackScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { CategoriesScreen } from './screens/CategoriesScreen'
 import OtpVerificationScreen from './screens/OtpVerificationScreen' 
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native'
+import { View, ActivityIndicator, StyleSheet, Text, Alert } from 'react-native'
 import DarkThemes from './theme/DarkThemes'
 import LightTheme from './theme/LightTheme'
 import {AppContext, AppContextProvider} from './theme/AppContext'
@@ -67,7 +67,7 @@ const MainStack = () => (
 
 const AppContent = () => {
   const { user, loading: authLoading } = useAuth()
-  const { onboardingCompleted, loading: preferencesLoading, refreshPreferences } = usePreferences()
+  const { onboardingCompleted, loading: preferencesLoading, refreshPreferences, checkAndTransferGuestData } = usePreferences()
   const [forceMainApp, setForceMainApp] = React.useState(false)
   const [appPhase, setAppPhase] = React.useState<'demo' | 'choice' | 'auth' | 'welcome' | 'main'>('main')
   const [demoProgress, setDemoProgress] = React.useState({ totalXP: 0, completedHabits: 0 })
@@ -81,24 +81,59 @@ const AppContent = () => {
   const loading = authLoading || (user && preferencesLoading)
   const shouldShowOnboarding = !forceMainApp && ((user && !onboardingCompleted) || (!user && appPhase === 'main'))
   
-  // Determine app phase based on user state
+  // Determine app phase based on user state and handle guest data transfer
   React.useEffect(() => {
-    if (user) {
-      // When user becomes authenticated
-      if (appPhase === 'auth') {
-        // User just completed authentication from auth flow
-        if (demoProgress.totalXP > 0 || demoProgress.completedHabits > 0) {
-          setAppPhase('welcome')
-        } else {
+    const handleAuthAndGuestData = async () => {
+      if (user) {
+        console.log('🔍 User authenticated, checking for guest data transfer...')
+        
+        try {
+          // Check if we need to transfer guest data
+          const guestDataTransferred = await checkAndTransferGuestData()
+          
+          if (guestDataTransferred) {
+            console.log('✅ Guest data transferred successfully - skipping onboarding')
+            // Guest data was transferred, so skip onboarding and go to main app
+            setAppPhase('main')
+            setForceMainApp(true) // Ensure we don't show onboarding
+            
+            // Show success message to user
+            setTimeout(() => {
+              Alert.alert(
+                'Welcome Back! 🎉',
+                'Your progress has been saved to your account. You can now access all your goals and habits!',
+                [{ text: 'Continue' }]
+              )
+            }, 1000)
+            return
+          }
+          
+          // No guest data to transfer, continue with normal flow
+          console.log('No guest data found, proceeding with normal auth flow')
+          
+        } catch (error) {
+          console.error('❌ Error during guest data transfer:', error)
+          // Continue with normal flow even if guest transfer fails
+        }
+        
+        // Normal authentication flow
+        if (appPhase === 'auth') {
+          // User just completed authentication from auth flow
+          if (demoProgress.totalXP > 0 || demoProgress.completedHabits > 0) {
+            setAppPhase('welcome')
+          } else {
+            setAppPhase('main')
+          }
+        } else if (appPhase === 'demo' || appPhase === 'choice') {
+          // User was in demo/choice but is now authenticated (returning user)
           setAppPhase('main')
         }
-      } else if (appPhase === 'demo' || appPhase === 'choice') {
-        // User was in demo/choice but is now authenticated (returning user)
-        setAppPhase('main')
+        // If already in welcome or main, don't change
       }
-      // If already in welcome or main, don't change
+      // If no user and not explicitly set, stay in current phase
     }
-    // If no user and not explicitly set, stay in demo phase
+
+    handleAuthAndGuestData()
   }, [user])
 
   // Add debug logging

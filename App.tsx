@@ -69,7 +69,7 @@ const AppContent = () => {
   const { user, loading: authLoading } = useAuth()
   const { onboardingCompleted, loading: preferencesLoading, refreshPreferences } = usePreferences()
   const [forceMainApp, setForceMainApp] = React.useState(false)
-  const [appPhase, setAppPhase] = React.useState<'demo' | 'choice' | 'auth' | 'welcome' | 'main'>('demo')
+  const [appPhase, setAppPhase] = React.useState<'demo' | 'choice' | 'auth' | 'welcome' | 'main'>('main')
   const [demoProgress, setDemoProgress] = React.useState({ totalXP: 0, completedHabits: 0 })
   const { isDarkTheme } = React.useContext(AppContext)
 

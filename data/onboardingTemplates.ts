@@ -11,6 +11,14 @@ export interface HabitTemplate {
   category: string
 }
 
+export interface DemoExperience {
+  id: string
+  type: 'stretch' | 'breathing' | 'expense' | 'gratitude' | 'mindfulness'
+  instruction: string
+  successMessage: string
+  xpReward: number
+}
+
 export interface GoalTemplate {
   id: string
   title: string
@@ -21,6 +29,7 @@ export interface GoalTemplate {
   estimatedDuration: string // "4-8 weeks"
   benefits: string[]
   habits: HabitTemplate[]
+  demoExperience?: DemoExperience // Optional demo experience for this goal
 }
 
 export interface CategoryTemplate {
@@ -388,7 +397,14 @@ export const goalTemplates: GoalTemplate[] = [
       physicalHealthHabits.find(h => h.id === 'calorie-tracking')!,
       physicalHealthHabits.find(h => h.id === 'weekly-weigh-in')!,
       physicalHealthHabits.find(h => h.id === 'water-intake')!
-    ]
+    ],
+    demoExperience: {
+      id: 'stretch-demo',
+      type: 'stretch',
+      instruction: 'Let\'s wake up your body with some gentle stretches to start your weight loss journey',
+      successMessage: 'Feel your body wake up! Every stretch brings you closer to your goal 💪',
+      xpReward: 20
+    }
   },
   {
     id: 'muscle-gain',
@@ -404,7 +420,14 @@ export const goalTemplates: GoalTemplate[] = [
       physicalHealthHabits.find(h => h.id === 'meal-prep')!,
       physicalHealthHabits.find(h => h.id === 'weekly-weigh-in')!,
       physicalHealthHabits.find(h => h.id === 'water-intake')!
-    ]
+    ],
+    demoExperience: {
+      id: 'stretch-demo',
+      type: 'stretch',
+      instruction: 'Prepare your muscles for growth with this activation routine',
+      successMessage: 'Great warm-up! Your muscles are ready to grow stronger 💪',
+      xpReward: 20
+    }
   },
   {
     id: 'flexibility',
@@ -418,7 +441,14 @@ export const goalTemplates: GoalTemplate[] = [
     habits: [
       physicalHealthHabits.find(h => h.id === 'stretching')!,
       physicalHealthHabits.find(h => h.id === 'water-intake')!
-    ]
+    ],
+    demoExperience: {
+      id: 'stretch-demo',
+      type: 'stretch',
+      instruction: 'Experience the freedom of movement with these flexibility-building stretches',
+      successMessage: 'Feel that range of motion! Your body is becoming more flexible 🤸‍♀️',
+      xpReward: 20
+    }
   },
   {
     id: 'endurance',
@@ -466,7 +496,14 @@ export const goalTemplates: GoalTemplate[] = [
       mentalHealthHabits.find(h => h.id === 'meditation')!,
       mentalHealthHabits.find(h => h.id === 'deep-breathing')!,
       mentalHealthHabits.find(h => h.id === 'mood-check')!
-    ]
+    ],
+    demoExperience: {
+      id: 'breathing-demo',
+      type: 'breathing',
+      instruction: 'Let stress melt away with this calming breathing exercise',
+      successMessage: 'Notice the calm flowing through you. You\'ve taken control of stress! 🧘‍♀️',
+      xpReward: 15
+    }
   },
   {
     id: 'mindfulness',
@@ -481,7 +518,14 @@ export const goalTemplates: GoalTemplate[] = [
       mentalHealthHabits.find(h => h.id === 'meditation')!,
       mentalHealthHabits.find(h => h.id === 'gratitude-journal')!,
       mentalHealthHabits.find(h => h.id === 'mood-check')!
-    ]
+    ],
+    demoExperience: {
+      id: 'breathing-demo',
+      type: 'breathing',
+      instruction: 'Center yourself in the present moment with mindful breathing',
+      successMessage: 'Beautiful! You\'ve connected with the present moment 🌸',
+      xpReward: 15
+    }
   },
   {
     id: 'sleep-quality',
@@ -526,7 +570,14 @@ export const goalTemplates: GoalTemplate[] = [
       mentalHealthHabits.find(h => h.id === 'mood-check')!,
       mentalHealthHabits.find(h => h.id === 'gratitude-journal')!,
       mentalHealthHabits.find(h => h.id === 'meditation')!
-    ]
+    ],
+    demoExperience: {
+      id: 'mindfulness-demo',
+      type: 'mindfulness',
+      instruction: 'Check in with your emotions to build self-awareness',
+      successMessage: 'Excellent! Self-awareness creates emotional balance and resilience ⚖️',
+      xpReward: 10
+    }
   },
 
   // Finance Goals
@@ -543,7 +594,14 @@ export const goalTemplates: GoalTemplate[] = [
       financeHabits.find(h => h.id === 'expense-tracking')!,
       financeHabits.find(h => h.id === 'savings-transfer')!,
       financeHabits.find(h => h.id === 'budget-review')!
-    ]
+    ],
+    demoExperience: {
+      id: 'expense-demo',
+      type: 'expense',
+      instruction: 'Start your savings journey by tracking a recent expense',
+      successMessage: 'Awareness is the first step to financial control! Every dollar tracked is a dollar saved 💰',
+      xpReward: 10
+    }
   },
   {
     id: 'debt-reduction',
@@ -588,7 +646,14 @@ export const goalTemplates: GoalTemplate[] = [
       financeHabits.find(h => h.id === 'expense-tracking')!,
       financeHabits.find(h => h.id === 'budget-review')!,
       financeHabits.find(h => h.id === 'financial-education')!
-    ]
+    ],
+    demoExperience: {
+      id: 'expense-demo',
+      type: 'expense',
+      instruction: 'Take control of your finances by tracking your spending',
+      successMessage: 'Perfect! Understanding your spending is the key to budgeting success 📊',
+      xpReward: 10
+    }
   },
   {
     id: 'income-growth',
@@ -618,7 +683,14 @@ export const goalTemplates: GoalTemplate[] = [
     habits: [
       socialHabits.find(h => h.id === 'family-call')!,
       socialHabits.find(h => h.id === 'active-listening')!
-    ]
+    ],
+    demoExperience: {
+      id: 'gratitude-demo',
+      type: 'gratitude',
+      instruction: 'Strengthen your bonds by expressing gratitude for a family member',
+      successMessage: 'Beautiful! Family connections start with gratitude and appreciation 👨‍👩‍👧‍👦',
+      xpReward: 15
+    }
   },
   {
     id: 'friendships',
@@ -633,7 +705,14 @@ export const goalTemplates: GoalTemplate[] = [
       socialHabits.find(h => h.id === 'friend-meetup')!,
       socialHabits.find(h => h.id === 'active-listening')!,
       socialHabits.find(h => h.id === 'social-media-positive')!
-    ]
+    ],
+    demoExperience: {
+      id: 'gratitude-demo',
+      type: 'gratitude',
+      instruction: 'Build stronger friendships by appreciating someone who made your day better',
+      successMessage: 'Amazing! Friendship grows when we appreciate each other 👥',
+      xpReward: 15
+    }
   },
   {
     id: 'networking',

@@ -85,7 +85,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     >
       <View style={styles.form}>
         <Text style={styles.title}>Life Sync</Text>
-        <Text style={styles.subtitle}>Sign in to your account</Text>
+        <Text style={styles.subtitle}>Sign in to save your progress and unlock more features</Text>
+        
+        <View style={styles.demoProgressBanner}>
+          <Text style={styles.bannerText}>🎯 You're about to save your demo progress!</Text>
+        </View>
 
         {!showPhoneLogin ? (
           <>
@@ -191,8 +195,22 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 16,
     color: '#666',
+  },
+  demoProgressBanner: {
+    backgroundColor: '#FEF3C7',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  bannerText: {
+    fontSize: 14,
+    color: '#D97706',
+    textAlign: 'center',
+    fontWeight: '600',
   },
   input: {
     height: 50,

@@ -415,7 +415,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         {/* Header */}
         <View style={[styles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.background }]}> 
           <Text style={[styles.headerTitle, { color: colors.text }]}>Home</Text>
-          <Switch value={isDarkTheme} onValueChange={(newValue) => setIsDarkTheme(newValue)} />
+          <View style={styles.headerRight}>
+            <TouchableOpacity 
+              style={[styles.profileIconButton, { backgroundColor: colors.primary }]}
+              onPress={() => navigation.navigate('Profile')}
+            >
+              <Text style={styles.profileIconText}>
+                {user?.email?.charAt(0).toUpperCase() || 'U'}
+              </Text>
+            </TouchableOpacity>
+            <Switch value={isDarkTheme} onChange={() => { setIsDarkTheme(prev => !prev); }} />
+          </View>
         </View>
         <View style={styles.loadingContainer}>
           <View style={styles.loadingSpinner} />
@@ -439,13 +449,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       <StatusBar barStyle={isDarkTheme ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       {/* Header */}
       <View style={[styles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.background }]}> 
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-            <Text style={[styles.logoutButtonText, { color: colors.primary }]}>Logout</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Home</Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity 
+            style={[styles.profileIconButton, { backgroundColor: colors.primary }]}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <Text style={styles.profileIconText}>
+              {user?.email?.charAt(0).toUpperCase() || 'U'}
+            </Text>
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text, marginLeft: 10 }]}>Home</Text>
+          <Switch value={isDarkTheme} onChange={() => { setIsDarkTheme(prev => !prev); }} />
         </View>
-        <Switch value={isDarkTheme} onValueChange={(newValue) => setIsDarkTheme(newValue)} />
       </View>
       <ScrollView 
         style={[styles.scrollContainer, { backgroundColor: colors.background }]} 
@@ -809,6 +824,32 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '700',
     color: '#1a1a1a',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  profileIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#7C3AED',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#7C3AED',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  profileIconText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: 'white',
   },
   scrollContainer: {
     flex: 1,

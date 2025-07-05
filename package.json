@@ -16,6 +16,9 @@
     "@react-navigation/stack": "^7.4.2",
     "@supabase/supabase-js": "^2.50.2",
     "expo": "~53.0.13",
+    "expo-constants": "~17.1.7",
+    "expo-device": "~7.1.4",
+    "expo-notifications": "^0.31.4",
     "expo-av": "^15.1.7",
     "expo-linear-gradient": "^14.1.5",
     "expo-speech": "^13.1.7",
@@ -27,10 +30,7 @@
     "react-native-safe-area-context": "^5.5.0",
     "react-native-screens": "^4.11.1",
     "react-native-url-polyfill": "^2.0.0",
-    "react-native-vector-icons": "^10.2.0",
-    "expo-notifications": "~0.31.3",
-    "expo-device": "~7.1.4",
-    "expo-constants": "~17.1.7"
+    "react-native-vector-icons": "^10.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

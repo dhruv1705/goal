@@ -3,6 +3,7 @@ import { View, Text, TextInput, Button, StyleSheet, Alert, KeyboardAvoidingView,
 import { StackNavigationProp, StackScreenProps } from '@react-navigation/stack'; 
 import { RootStackParamList } from '../types';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 interface OtpVerificationScreenProps extends StackScreenProps<RootStackParamList, 'OtpVerification'> {}
 
@@ -10,6 +11,7 @@ const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({ route, na
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const inputRefs = useRef<Array<TextInput | null>>([]);
+  const { signIn } = useAuth();
 
   const { phoneNumber } = route.params; 
 
@@ -34,18 +36,67 @@ const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({ route, na
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('verify-otp', {
-        body: { phoneNumber: phoneNumber, otpCode: otp },
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const response = await fetch(`https://ebdvpahpuefimdcfuvru.supabase.co/functions/v1/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViZHZwYWhwdWVmaW1kY2Z1dnJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMjM5NTMsImV4cCI6MjA2Njc5OTk1M30.8V52GocdThP5StIJ5ImZL3PwXPD8QWkJsj465QA2vI4'}`,
+        },
+        body: JSON.stringify({ phoneNumber: phoneNumber, otpCode: otp }),
       });
 
-      if (error) {
-        console.error('Error verifying OTP:', error);
-        Alert.alert('Verification Failed', error.message || 'Invalid OTP.');
-      } else if (data) {
-        Alert.alert('Success', data.message || 'Phone number verified!');
-        navigation.replace('Home');
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert('Success', data.message || 'Phone number verified!', [
+          {
+            text: 'OK',
+            onPress: async () => {
+              try {
+
+                const tempEmail = `${phoneNumber.replace(/\D/g, '')}@temp.com`;
+                const tempPassword = 'TempPass123!'; 
+                
+                await supabase.auth.signUp({
+                  email: tempEmail,
+                  password: tempPassword,
+                  options: {
+                    data: {
+                      phone_number: phoneNumber,
+                      auth_method: 'phone'
+                    }
+                  }
+                });
+
+                await supabase.auth.signInWithPassword({
+                  email: tempEmail,
+                  password: tempPassword,
+                });
+
+              } catch (authError) {
+                console.error('Error creating user session:', authError);
+                try {
+                  const tempEmail = `${phoneNumber.replace(/\D/g, '')}@temp.com`;
+                  const tempPassword = 'TempPass123!';
+                  await supabase.auth.signInWithPassword({
+                    email: tempEmail,
+                    password: tempPassword,
+                  });
+                } catch (signInError) {
+                  console.error('Error signing in existing user:', signInError);
+                  // Fallback: navigate to signup screen to complete registration
+                  navigation.navigate('SignUp');
+                }
+              }
+            }
+          }
+        ]);
       } else {
-        Alert.alert('Error', 'Failed to verify OTP: Unexpected response from server.');
+        console.error('Error verifying OTP:', data);
+        Alert.alert('Verification Failed', data.error || 'Invalid OTP.');
       }
     } catch (error: any) {
       console.error('Network error during OTP verification:', error);
@@ -58,17 +109,25 @@ const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({ route, na
   const handleResendOtp = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-otp', {
-        body: { phoneNumber: phoneNumber },
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const response = await fetch(`https://ebdvpahpuefimdcfuvru.supabase.co/functions/v1/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViZHZwYWhwdWVmaW1kY2Z1dnJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMjM5NTMsImV4cCI6MjA2Njc5OTk1M30.8V52GocdThP5StIJ5ImZL3PwXPD8QWkJsj465QA2vI4'}`,
+        },
+        body: JSON.stringify({ phoneNumber: phoneNumber }),
       });
 
-      if (error) {
-        console.error('Error resending OTP:', error);
-        Alert.alert('Resend Failed', error.message || 'Failed to resend OTP.');
-      } else if (data && data.otp) {
+      const data = await response.json();
+
+      if (response.ok) {
         Alert.alert('Resend Success', 'New OTP sent to your phone.');
       } else {
-        Alert.alert('Resend Failed', 'Failed to resend OTP: Unexpected response from server.');
+        console.error('Error resending OTP:', data);
+        Alert.alert('Resend Failed', data.error || 'Failed to resend OTP.');
       }
     } catch (error: any) {
       console.error('Network error resending OTP:', error);

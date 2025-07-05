@@ -62,13 +62,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch data in parallel to reduce loading time
       const [tasksResult, goalsResult] = await Promise.all([
         fetchTodayTasks(),
         fetchActiveGoals()
       ])
-      
-      // Calculate stats after we have the data
+
       await calculateStats()
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error)
@@ -88,12 +86,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         .limit(5)
 
       if (error) throw error
-
-      // Fetch goal categories separately for tasks that have goal_id (with caching)
       const tasksWithCategories = await Promise.all(
         (data || []).map(async (task) => {
           if (task.goal_id) {
-            // Check cache first
             if (goalCategoryCache[task.goal_id]) {
               return { ...task, goalCategory: goalCategoryCache[task.goal_id] }
             }
@@ -103,8 +98,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               .select('category')
               .eq('id', task.goal_id)
               .single()
-            
-            // Cache the result
+
             if (goalData?.category) {
               setGoalCategoryCache(prev => ({
                 ...prev,
@@ -138,7 +132,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       if (error) throw error
       setActiveGoals(data || [])
 
-      // Calculate progress for each goal
       if (data) {
         const progressMap: {[key: string]: number} = {}
         for (const goal of data) {
@@ -155,7 +148,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const calculateStats = async () => {
     try {
-      // Today's tasks stats
       const { data: todayData, error: todayError } = await supabase
         .from('schedules')
         .select('completed')
@@ -442,6 +434,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       </SafeAreaView>
     )
   }
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigation.navigate('Login');
+    } catch (error) {
+      console.error('Failed to log out:', error);
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
@@ -1439,168 +1440,122 @@ const styles = StyleSheet.create({
 
   // Category Icon Styles (copied from other screens)
   categoryIconContainer: {
-    width: 24,
-    height: 24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
-  // Health Icon - Heart
-  healthIcon: {
-    width: 20,
-    height: 20,
-    position: 'relative',
+  physicalHealthIcon: {
+    width: 30,
+    height: 15,
+    backgroundColor: '#FFD700', 
+    borderRadius: 5,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  healthIconHeart: {
-    width: 14,
-    height: 12,
-    backgroundColor: '#EF4444',
-    borderRadius: 7,
-    transform: [{ rotate: '-45deg' }],
-    position: 'absolute',
-    top: 3,
-    left: 3,
-  },
-  healthIconPulse: {
-    width: 5,
-    height: 5,
-    backgroundColor: '#EF4444',
-    borderRadius: 2.5,
-    position: 'absolute',
-    top: 1,
-    right: 2,
-  },
-
-  // Career Icon - Briefcase
-  careerIcon: {
-    width: 20,
-    height: 20,
-    position: 'relative',
-  },
-  careerIconBag: {
-    width: 16,
-    height: 12,
-    borderWidth: 2,
-    borderColor: '#3B82F6',
-    borderRadius: 2,
-    backgroundColor: 'transparent',
-    position: 'absolute',
-    bottom: 0,
-    left: 2,
-  },
-  careerIconHandle: {
-    width: 8,
-    height: 4,
-    borderWidth: 2,
-    borderColor: '#3B82F6',
-    borderBottomWidth: 0,
-    backgroundColor: 'transparent',
-    position: 'absolute',
-    top: 2,
-    left: 6,
-  },
-
-  // Personal Icon - Star
-  personalIcon: {
-    width: 20,
-    height: 20,
-    position: 'relative',
-  },
-  personalIconStar: {
-    width: 16,
-    height: 16,
-    backgroundColor: '#F59E0B',
-    transform: [{ rotate: '45deg' }],
-    position: 'absolute',
-    top: 2,
-    left: 2,
-  },
-  personalIconCenter: {
-    width: 8,
-    height: 8,
-    backgroundColor: '#FEF3C7',
-    borderRadius: 4,
-    position: 'absolute',
-    top: 6,
-    left: 6,
-  },
-
-  // Learning Icon - Book
-  learningIcon: {
-    width: 20,
-    height: 20,
-    position: 'relative',
-  },
-  learningIconBook: {
-    width: 14,
-    height: 16,
-    borderWidth: 2,
-    borderColor: '#10B981',
-    borderRadius: 1,
-    backgroundColor: 'transparent',
-    position: 'absolute',
-    left: 3,
-    top: 2,
-  },
-  learningIconPages: {
+  dumbbellWeight: {
     width: 10,
-    height: 1.5,
-    backgroundColor: '#10B981',
-    position: 'absolute',
-    top: 8,
-    left: 5,
-  },
-
-  // Finance Icon - Dollar
-  financeIcon: {
-    width: 20,
     height: 20,
-    position: 'relative',
-  },
-  financeIconCircle: {
-    width: 16,
-    height: 16,
-    borderWidth: 2,
-    borderColor: '#8B5CF6',
-    borderRadius: 8,
-    backgroundColor: 'transparent',
-    position: 'absolute',
-    top: 2,
-    left: 2,
-  },
-  financeIconDollar: {
-    width: 2,
-    height: 10,
-    backgroundColor: '#8B5CF6',
-    position: 'absolute',
-    top: 5,
-    left: 9,
-  },
-
-  // Other Icon - Target
-  otherIcon: {
-    width: 20,
-    height: 20,
-    position: 'relative',
-  },
-  otherIconTarget: {
-    width: 16,
-    height: 16,
-    borderWidth: 2,
-    borderColor: '#6B7280',
-    borderRadius: 8,
-    backgroundColor: 'transparent',
-    position: 'absolute',
-    top: 2,
-    left: 2,
-  },
-  otherIconCenter: {
-    width: 6,
-    height: 6,
-    backgroundColor: '#6B7280',
+    backgroundColor: '#8B4513', 
     borderRadius: 3,
+  },
+  dumbbellBar: {
+    width: 15,
+    height: 5,
+    backgroundColor: '#A9A9A9', 
+  },
+  mentalHealthIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#87CEEB', 
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  brainShape: {
+    width: 20,
+    height: 15,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    borderBottomLeftRadius: 5,
+    borderBottomRightRadius: 5,
+    borderColor: '#4682B4',
+    borderWidth: 2,
+    position: 'relative',
+  },
+  brainDetail: {
     position: 'absolute',
-    top: 7,
-    left: 7,
+    width: 2,
+    height: 8,
+    backgroundColor: '#4682B4',
+    left: '50%',
+    top: 2,
+    marginLeft: -1,
+  },
+  financeIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#32CD32', 
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  coinOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#FFD700', 
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  coinText: {
+    color: '#FFD700', 
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  socialIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#FF6347', 
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  person: {
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 2,
+  },
+  defaultIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#6B7280',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  defaultIconCircle: {
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  goalActionIcon: {
+    width: 20,
+    height: 20,
+    tintColor: '#7C3AED',
+  },
+  logoutButton: {
+    marginRight: 10,
+  },
+  logoutButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 })

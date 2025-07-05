@@ -20,13 +20,13 @@ import { HomeScreen } from './screens/HomeScreen'
 import { CategoriesScreen } from './screens/CategoriesScreen'
 import OtpVerificationScreen from './screens/OtpVerificationScreen' 
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native'
-import DarkThemes from './theme/DarkThemes'
-import LightTheme from './theme/LightTheme'
+import DarkThemes from './theme/DarkThemes.ts'
+import LightTheme from './theme/LightTheme.ts'
 import {AppContext, AppContextProvider} from './theme/AppContext'
 import { RootStackParamList } from './types' 
 import { usePushNotifications } from './notification/notification'
 import { TalkScreen } from './screens/TalkScreen'
-const Stack = createStackNavigator()
+const Stack = createStackNavigator<RootStackParamList>()
 
 const AuthStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>

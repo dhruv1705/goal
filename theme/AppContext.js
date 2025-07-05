@@ -2,7 +2,7 @@ import React, { createContext, useState } from 'react';
 
 export const AppContext = createContext({
   isDarkTheme: false,
-  setIsDarkTheme: () => {},
+  setIsDarkTheme: (value: boolean | ((prevState: boolean) => boolean)) => {},
 });
 
 export const AppContextProvider = ({ children }) => {

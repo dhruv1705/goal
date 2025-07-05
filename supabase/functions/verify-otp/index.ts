@@ -2,6 +2,8 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.44.0';
 
 serve(async (req) => {
+  console.log('Edge Function verify-otp invoked!');
+  
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
       status: 405,
@@ -9,12 +11,41 @@ serve(async (req) => {
     });
   }
 
-  const { phoneNumber, otpCode } = await req.json();
-
-  if (!phoneNumber || !otpCode) {
-    return new Response(JSON.stringify({ error: 'Phone number and OTP code are required' }), {
+  let phoneNumber, otpCode;
+  try {
+    const bodyText = await req.text();
+    console.log('Raw request body:', bodyText);
+    console.log('Request body length:', bodyText.length);
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
+    
+    if (!bodyText || bodyText.trim() === '') {
+      console.error('Request body is empty');
+      return new Response(JSON.stringify({
+        error: 'Request body is empty'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    const requestBody = JSON.parse(bodyText);
+    phoneNumber = requestBody.phoneNumber;
+    otpCode = requestBody.otpCode;
+    
+    if (!phoneNumber || !otpCode) {
+      console.error('Missing phoneNumber or otpCode in request body');
+      return new Response(JSON.stringify({ error: 'Phone number and OTP code are required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  } catch (jsonError) {
+    console.error('Error parsing request body as JSON:', jsonError.message || jsonError);
+    return new Response(JSON.stringify({
+      error: 'Invalid JSON in request body'
+    }), {
       status: 400,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 

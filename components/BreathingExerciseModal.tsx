@@ -97,9 +97,23 @@ export const BreathingExerciseModal: React.FC<BreathingExerciseModalProps> = ({
     }
 
     return () => {
-      cleanupAudio()
+      // Aggressive cleanup when component unmounts
+      console.log('🔥 Breathing modal useEffect cleanup triggered')
+      cleanupAudio().catch(error => {
+        console.log('❌ Error in useEffect cleanup:', error)
+      })
     }
   }, [visible, isAudioEnabled, selectedAmbient, selectedGuidance])
+
+  // CRITICAL: Cleanup audio immediately when modal becomes invisible
+  useEffect(() => {
+    if (!visible) {
+      console.log('🔥 Breathing modal became invisible - triggering immediate audio cleanup')
+      cleanupAudio().catch(error => {
+        console.log('❌ Error in visibility cleanup:', error)
+      })
+    }
+  }, [visible])
 
   const getAmbientAudioSource = () => {
     try {
@@ -381,17 +395,46 @@ export const BreathingExerciseModal: React.FC<BreathingExerciseModalProps> = ({
 
   const cleanupAudio = async () => {
     try {
+      console.log('🧹 Starting breathing exercise audio cleanup...')
+      
+      // Stop and unload ambient sound
       if (ambientSound) {
-        await ambientSound.stopAsync()
-        await ambientSound.unloadAsync()
+        try {
+          const status = await ambientSound.getStatusAsync()
+          if (status.isLoaded) {
+            if (status.isPlaying) {
+              await ambientSound.stopAsync()
+              console.log('✅ Ambient sound stopped')
+            }
+            await ambientSound.unloadAsync()
+            console.log('✅ Ambient sound unloaded')
+          }
+        } catch (error) {
+          console.log('❌ Error cleaning ambient sound:', error)
+        }
         setAmbientSound(null)
       }
+      
+      // Stop and unload breath sound
       if (breathSound) {
-        await breathSound.unloadAsync()
+        try {
+          const status = await breathSound.getStatusAsync()
+          if (status.isLoaded) {
+            await breathSound.unloadAsync()
+            console.log('✅ Breath sound unloaded')
+          }
+        } catch (error) {
+          console.log('❌ Error cleaning breath sound:', error)
+        }
         setBreathSound(null)
       }
+      
+      // Stop any voice instructions
+      await stopVoiceInstructions()
+      
+      console.log('🎯 Breathing exercise audio cleanup completed')
     } catch (error) {
-      console.log('Audio cleanup error:', error)
+      console.log('❌ Audio cleanup error:', error)
     }
   }
 
@@ -432,20 +475,51 @@ export const BreathingExerciseModal: React.FC<BreathingExerciseModalProps> = ({
 
   const toggleAudio = async () => {
     const newAudioState = !isAudioEnabled
-    setIsAudioEnabled(newAudioState)
+    console.log('Toggling audio from', isAudioEnabled, 'to', newAudioState)
     
     if (newAudioState) {
       // Audio was turned on
       console.log('Enabling audio...')
-      if (!ambientSound) {
-        await createAmbientAudio()
-      }
-      if (isActive && ambientSound) {
+      setIsAudioEnabled(true)
+      
+      // Create audio if it doesn't exist
+      let audioToUse = ambientSound
+      if (!audioToUse) {
+        console.log('No existing audio, creating new audio...')
         try {
-          console.log('Re-starting ambient audio after toggle...')
-          await ambientSound.playAsync()
-          await ambientSound.setVolumeAsync(0.1)
-          console.log('Audio re-started successfully')
+          await createAmbientAudio()
+          // Wait a bit for state to update
+          await new Promise(resolve => setTimeout(resolve, 100))
+          audioToUse = ambientSound
+        } catch (error) {
+          console.log('Error creating audio during toggle:', error)
+          return
+        }
+      }
+      
+      // If exercise is active, start playing immediately
+      if (isActive) {
+        try {
+          console.log('Exercise is active, starting audio immediately...')
+          if (audioToUse) {
+            await audioToUse.playAsync()
+            await audioToUse.setVolumeAsync(0.4)
+            console.log('Audio started successfully after toggle')
+          } else {
+            console.log('Audio object not available yet, retrying...')
+            // Retry with a slight delay
+            setTimeout(async () => {
+              if (ambientSound && isAudioEnabled) {
+                try {
+                  await ambientSound.playAsync()
+                  await ambientSound.setVolumeAsync(0.4)
+                  console.log('Audio started successfully after retry')
+                } catch (retryError) {
+                  console.log('Audio retry failed:', retryError)
+                }
+              }
+            }, 200)
+          }
         } catch (error) {
           console.log('Audio enable error:', error)
         }
@@ -453,9 +527,12 @@ export const BreathingExerciseModal: React.FC<BreathingExerciseModalProps> = ({
     } else {
       // Audio was turned off
       console.log('Disabling audio...')
+      setIsAudioEnabled(false)
+      
       if (ambientSound) {
         try {
           await ambientSound.stopAsync()
+          console.log('Audio stopped successfully')
         } catch (error) {
           console.log('Audio disable error:', error)
         }
@@ -463,7 +540,7 @@ export const BreathingExerciseModal: React.FC<BreathingExerciseModalProps> = ({
     }
   }
 
-  // Modal entrance animation
+  // Modal entrance animation and cleanup
   useEffect(() => {
     if (visible) {
       Animated.timing(modalAnim, {
@@ -474,6 +551,13 @@ export const BreathingExerciseModal: React.FC<BreathingExerciseModalProps> = ({
       }).start()
     } else {
       modalAnim.setValue(0)
+      // CRITICAL: Cleanup audio immediately when modal becomes invisible
+      if (!visible) {
+        console.log('🚨 Modal became invisible, triggering immediate audio cleanup')
+        cleanupAudio().catch(error => {
+          console.log('❌ Error in immediate cleanup:', error)
+        })
+      }
     }
   }, [visible])
 
@@ -592,19 +676,11 @@ export const BreathingExerciseModal: React.FC<BreathingExerciseModalProps> = ({
     setIsActive(false)
     setBreathingText("Beautiful work! 🌟")
     
-    // No voice instructions to stop
+    // Stop voice instructions
+    await stopVoiceInstructions()
     
-    // Stop ambient audio
-    if (ambientSound && isAudioEnabled) {
-      try {
-        console.log('Stopping ambient audio...')
-        setAudioStatus('stopped')
-        await ambientSound.stopAsync()
-        console.log('Ambient audio stopped successfully')
-      } catch (error) {
-        console.log('Audio stop error:', error)
-      }
-    }
+    // CRITICAL: Properly cleanup all audio resources
+    await cleanupAudio()
     
     // Celebration animation
     Animated.sequence([
@@ -633,16 +709,11 @@ export const BreathingExerciseModal: React.FC<BreathingExerciseModalProps> = ({
     backgroundAnim.setValue(0)
     particleOpacity.setValue(0)
     
-    // No voice instructions to stop
+    // Stop voice instructions
+    await stopVoiceInstructions()
     
-    // Stop ambient audio
-    if (ambientSound && isAudioEnabled) {
-      try {
-        await ambientSound.stopAsync()
-      } catch (error) {
-        console.log('Audio stop error:', error)
-      }
-    }
+    // CRITICAL: Properly cleanup all audio resources
+    await cleanupAudio()
     
     onCancel()
   }
@@ -838,23 +909,98 @@ export const BreathingExerciseModal: React.FC<BreathingExerciseModalProps> = ({
             console.log('Selecting ambient:', option.name)
             setSelectedAmbient(option.id)
             
-            // Recreate audio with new selection
-            if (ambientSound) {
-              await ambientSound.unloadAsync()
-              setAmbientSound(null)
+            // Store whether we need to restart audio after creation
+            const shouldRestartAudio = isActive && isAudioEnabled && ambientSound
+            let wasPlaying = false
+            
+            // Check if current audio is playing
+            if (shouldRestartAudio) {
+              try {
+                const status = await ambientSound.getStatusAsync()
+                wasPlaying = status.isLoaded && status.isPlaying
+                console.log('Current audio playing status:', wasPlaying)
+              } catch (error) {
+                console.log('Error checking audio status:', error)
+                wasPlaying = true // Assume it was playing
+              }
             }
             
-            // Recreate audio with new selection
+            // Unload old audio
+            if (ambientSound) {
+              try {
+                await ambientSound.stopAsync()
+                await ambientSound.unloadAsync()
+                setAmbientSound(null)
+              } catch (error) {
+                console.log('Error unloading old audio:', error)
+              }
+            }
+            
+            // Create new audio if audio is enabled
             if (isAudioEnabled) {
-              await createAmbientAudio()
-              
-              // If currently playing, restart with new audio
-              if (isActive && ambientSound) {
+              try {
+                console.log('Creating new ambient audio for:', option.id)
+                
+                // Get the audio source
+                const getNewAudioSource = () => {
+                  switch (option.id) {
+                    case 'angelical':
+                      return require('../assets/audio/ambient/angelical.mp3')
+                    case 'forest':
+                      return require('../assets/audio/ambient/forest.mp3')
+                    case 'rain':
+                      return require('../assets/audio/ambient/rain.mp3')
+                    case 'generated-ambient':
+                    default:
+                      return { uri: createWorkingAmbientSound() }
+                  }
+                }
+                
+                const audioSource = getNewAudioSource()
+                const { sound: newAmbientSound } = await Audio.Sound.createAsync(
+                  audioSource,
+                  {
+                    isLooping: true,
+                    volume: 0.4,
+                    rate: 1.0,
+                  }
+                )
+                
+                console.log('New ambient sound created successfully')
+                setAmbientSound(newAmbientSound)
+                
+                // If exercise was active and audio was playing, restart immediately
+                if (shouldRestartAudio && wasPlaying) {
+                  console.log('Restarting audio immediately...')
+                  await newAmbientSound.playAsync()
+                  await newAmbientSound.setVolumeAsync(0.4)
+                  console.log('Audio restarted successfully with new selection')
+                }
+                
+              } catch (error) {
+                console.log('Error creating new audio:', error)
+                // Fallback to generated audio
                 try {
-                  await ambientSound.playAsync()
-                  await ambientSound.setVolumeAsync(0.4)
-                } catch (error) {
-                  console.log('Error restarting audio:', error)
+                  const fallbackUri = createWorkingAmbientSound()
+                  if (fallbackUri) {
+                    const { sound: fallbackSound } = await Audio.Sound.createAsync(
+                      { uri: fallbackUri },
+                      {
+                        isLooping: true,
+                        volume: 0.3,
+                        rate: 1.0,
+                      }
+                    )
+                    setAmbientSound(fallbackSound)
+                    
+                    if (shouldRestartAudio && wasPlaying) {
+                      await fallbackSound.playAsync()
+                      console.log('Fallback audio restarted')
+                    }
+                  }
+                } catch (fallbackError) {
+                  console.log('Fallback audio creation failed:', fallbackError)
+                  setIsAudioEnabled(false)
                 }
               }
             }

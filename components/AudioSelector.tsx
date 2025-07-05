@@ -7,7 +7,10 @@ interface AudioOption {
   description: string
   type: 'generated' | 'file'
   source?: any // For require() imports
+  stretchDescription?: string // Alternative description for stretching context
 }
+
+type AudioContext = 'breathing' | 'stretching'
 
 interface AudioSelectorProps {
   visible: boolean
@@ -16,6 +19,7 @@ interface AudioSelectorProps {
   onSelectGuidance: (option: AudioOption) => void
   currentAmbient?: string
   currentGuidance?: string
+  context?: AudioContext // New prop for context
 }
 
 const ambientOptions: AudioOption[] = [
@@ -23,26 +27,30 @@ const ambientOptions: AudioOption[] = [
     id: 'generated-ambient',
     name: 'Generated Ambient',
     description: 'Synthesized calming tones',
+    stretchDescription: 'Synthesized gentle energy tones',
     type: 'generated'
   },
   {
     id: 'angelical',
     name: 'Angelical',
-    description: 'Ethereal angelic soundscape',
+    description: 'Ethereal angelic soundscape for deep relaxation',
+    stretchDescription: 'Peaceful angelic sounds for mindful movement',
     type: 'file',
     source: require('../assets/audio/ambient/angelical.mp3')
   },
   {
     id: 'forest',
     name: 'Forest Sounds',
-    description: 'Birds and rustling leaves',
+    description: 'Birds and rustling leaves for meditation',
+    stretchDescription: 'Natural forest ambience for flowing movement',
     type: 'file',
     source: require('../assets/audio/ambient/forest.mp3')
   },
   {
     id: 'rain',
     name: 'Gentle Rain',
-    description: 'Soft rainfall ambience',
+    description: 'Soft rainfall for deep breathing',
+    stretchDescription: 'Rhythmic rain sounds for gentle stretching',
     type: 'file',
     source: require('../assets/audio/ambient/rain.mp3')
   }
@@ -64,7 +72,8 @@ export const AudioSelector: React.FC<AudioSelectorProps> = ({
   onSelectAmbient,
   onSelectGuidance,
   currentAmbient,
-  currentGuidance
+  currentGuidance,
+  context = 'breathing' // Default to breathing for backward compatibility
 }) => {
   if (!visible) return null
 
@@ -97,7 +106,9 @@ export const AudioSelector: React.FC<AudioSelectorProps> = ({
           styles.optionDescription,
           isDisabled && styles.optionDescriptionDisabled
         ]}>
-          {option.description}
+          {context === 'stretching' && option.stretchDescription 
+            ? option.stretchDescription 
+            : option.description}
         </Text>
       </View>
       {isSelected && <Text style={styles.checkmark}>✓</Text>}
@@ -108,14 +119,18 @@ export const AudioSelector: React.FC<AudioSelectorProps> = ({
     <View style={styles.overlay}>
       <View style={styles.modal}>
         <View style={styles.header}>
-          <Text style={styles.title}>Audio Settings</Text>
+          <Text style={styles.title}>
+            {context === 'stretching' ? 'Stretch Audio Settings' : 'Breathing Audio Settings'}
+          </Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Text style={styles.closeText}>×</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Background Ambient Sound</Text>
+          <Text style={styles.sectionTitle}>
+            {context === 'stretching' ? 'Stretching Background Music' : 'Meditation Background Sound'}
+          </Text>
           {ambientOptions.map(option => 
             renderOption(
               option,

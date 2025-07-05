@@ -79,7 +79,7 @@ const AppContent = () => {
   console.log('Expo Push Token:', expoPushToken); 
 
   const loading = authLoading || (user && preferencesLoading)
-  const shouldShowOnboarding = user && !onboardingCompleted && !forceMainApp
+  const shouldShowOnboarding = !forceMainApp && ((user && !onboardingCompleted) || (!user && appPhase === 'main'))
   
   // Determine app phase based on user state
   React.useEffect(() => {
@@ -134,8 +134,9 @@ const AppContent = () => {
   }
   
   const handleContinueAsGuest = () => {
-    // For now, go to auth - we'll implement guest mode later
-    setAppPhase('auth')
+    // Go directly to onboarding for guest users
+    setAppPhase('main')
+    setForceMainApp(false) // Ensure onboarding shows
   }
   
   const handleAuthComplete = () => {
@@ -214,11 +215,16 @@ const AppContent = () => {
               <OnboardingScreen 
                 {...props} 
                 onComplete={() => {
-                  console.log('🎯 Onboarding onComplete callback triggered - forcing main app')
-                  console.log('🔄 Setting forceMainApp to true...')
-                  setForceMainApp(true)
-                  console.log('📡 Refreshing preferences...')
-                  refreshPreferences()
+                  console.log('🎯 Onboarding onComplete callback triggered')
+                  if (user) {
+                    console.log('🔄 Authenticated user - setting forceMainApp to true...')
+                    setForceMainApp(true)
+                    console.log('📡 Refreshing preferences...')
+                    refreshPreferences()
+                  } else {
+                    console.log('👤 Guest user - redirecting to auth')
+                    setAppPhase('auth')
+                  }
                   console.log('✅ onComplete callback finished')
                 }} 
               />

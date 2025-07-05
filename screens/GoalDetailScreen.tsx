@@ -847,7 +847,7 @@ export const GoalDetailScreen: React.FC<StackScreenProps<RootStackParamList, 'Go
           <Text style={[styles.navLabel, { color: colors.text }]}>Schedule</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation('Talk')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Talk')}>
           <Image source={IMAGES.TALK} style={styles.navIcon} tintColor={colors.text} />
           <Text style={[styles.navLabel, { color: colors.text }]}>Talk</Text>
         </TouchableOpacity>

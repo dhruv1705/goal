@@ -11,6 +11,7 @@ import {
 } from 'react-native'
 import { useAuth } from '../contexts/AuthContext'
 import { PasswordInput } from '../components/PasswordInput'
+import { supabase } from '../lib/supabase'; 
 
 interface LoginScreenProps {
   navigation: any
@@ -21,6 +22,37 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const { signIn } = useAuth()
+  const [phoneNumber,setPhoneNumber]=useState('')
+  const [showPhoneLogin,setShowPhoneLogin]=useState(false);
+  
+  const handlePhoneLogin = async () => {
+    if (!phoneNumber) {
+      Alert.alert('Mandatory', 'Please enter your phone number.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-otp', {
+        body: { phoneNumber: phoneNumber },
+      });
+
+      if (error) {
+        console.error('Error sending OTP:', error);
+        Alert.alert('Error', error.message || 'Failed to send OTP.');
+      } else if (data && data.otp) {
+        Alert.alert('Success', 'OTP sent successfully!');
+        navigation.navigate('OtpVerification', { phoneNumber: phoneNumber }); 
+      } else {
+        Alert.alert('Error', 'Failed to send OTP: Unexpected response from server.');
+      }
+    } catch (error: any) {
+      console.error('Network error sending OTP:', error);
+      Alert.alert('Error', 'An unexpected error occurred while sending OTP.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -51,32 +83,66 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           <Text style={styles.bannerText}>🎯 You're about to save your demo progress!</Text>
         </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoCorrect={false}
-        />
+        {!showPhoneLogin ? (
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoCorrect={false}
+            />
 
-        <PasswordInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-        />
+            <PasswordInput
+              style={styles.input}
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+            />
 
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? 'Signing in...' : 'Sign In'}
-          </Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? 'Signing in...' : 'Sign In'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.toggleButton} onPress={() => setShowPhoneLogin(true)}>
+              <Text style={styles.toggleButtonText}>Sign in via Mobile</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="Phone Number"
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              keyboardType="phone-pad"
+              autoCapitalize="none"
+              maxLength={15}
+            />
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handlePhoneLogin}
+              disabled={loading}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? 'Signing in...' : 'Sign In'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.toggleButton} onPress={() => setShowPhoneLogin(false)}>
+              <Text style={styles.toggleButtonText}>Sign in via Email/Password</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
         <TouchableOpacity
           style={styles.linkButton}
@@ -170,4 +236,14 @@ const styles = StyleSheet.create({
     color: '#7C3AED',
     fontSize: 16,
   },
-})
+  toggleButton: {
+    marginTop: 5,
+    padding: 10,
+    alignItems: 'center',
+  },
+  toggleButtonText: {
+    color: '#7C3AED', 
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});

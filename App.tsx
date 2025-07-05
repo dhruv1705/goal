@@ -1,7 +1,7 @@
 import React, { useState,useMemo } from 'react'
 import { StatusBar } from 'expo-status-bar'
 import { NavigationContainer } from '@react-navigation/native'
-import { createStackNavigator } from '@react-navigation/stack'
+import { createStackNavigator, StackScreenProps } from '@react-navigation/stack'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { PreferencesProvider, usePreferences } from './contexts/PreferencesContext'
@@ -18,11 +18,14 @@ import { GoalDetailScreen } from './screens/GoalDetailScreen'
 import { FeedbackScreen } from './screens/FeedbackScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { CategoriesScreen } from './screens/CategoriesScreen'
-import { TalkScreen } from './screens/TalkScreen'
-import { View, ActivityIndicator, StyleSheet } from 'react-native'
+import OtpVerificationScreen from './screens/OtpVerificationScreen' 
+import { View, ActivityIndicator, StyleSheet, Text } from 'react-native'
 import DarkThemes from './theme/DarkThemes'
 import LightTheme from './theme/LightTheme'
 import {AppContext, AppContextProvider} from './theme/AppContext'
+import { RootStackParamList } from './types' 
+import { usePushNotifications } from './notification/notification'
+import { TalkScreen } from './screens/TalkScreen'
 const Stack = createStackNavigator()
 
 const AuthStack = () => (
@@ -68,6 +71,11 @@ const AppContent = () => {
   const [demoProgress, setDemoProgress] = React.useState({ totalXP: 0, completedHabits: 0 })
   const { isDarkTheme } = React.useContext(AppContext)
 
+  const {expoPushToken,notification}=usePushNotifications(); 
+  const data=JSON.stringify(notification,undefined,2);
+
+  console.log('Expo Push Token:', expoPushToken); 
+
   const loading = authLoading || (user && preferencesLoading)
   const shouldShowOnboarding = user && !onboardingCompleted && !forceMainApp
   
@@ -100,8 +108,8 @@ const AppContent = () => {
 
   console.log(shouldShowOnboarding ? 'Showing onboarding screen' : 'Showing main app navigation')
 
-  const handleDemoComplete = (totalXP: number, completedHabits: number) => {
-    setDemoProgress({ totalXP, completedHabits })
+  const handleDemoComplete = (totalXP?: number, completedHabits?: number) => {
+    setDemoProgress({ totalXP: totalXP || 0, completedHabits: completedHabits || 0 })
     setAppPhase('choice')
   }
   
@@ -154,6 +162,12 @@ const AppContent = () => {
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="SignUp" component={SignUpScreen} />
+            <Stack.Screen 
+              name="OtpVerification" 
+              children={({ navigation, route }: StackScreenProps<RootStackParamList, 'OtpVerification'>) => (
+                <OtpVerificationScreen navigation={navigation} route={route} />
+              )}
+            />
           </>
         )
         
@@ -201,7 +215,6 @@ const AppContent = () => {
         {renderCurrentPhase()}
       </Stack.Navigator>
     </NavigationContainer>
-  )
 }
 
 const AppNavigator = () => {
@@ -231,5 +244,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
+  },
+  notificationDisplayContainer: { 
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    right: 20,
+    zIndex: 9999,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: 10,
+    borderRadius: 5,
   },
 })

@@ -21,11 +21,13 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [phoneNumber,setPhoneNumber]=useState('')
+
   const { signUp } = useAuth()
 
   const handleSignUp = async () => {
-    if (!email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields')
+    if (!email || !password || !confirmPassword || !phoneNumber) {
+      Alert.alert('Mandatory', 'Please fill in all fields')
       return
     }
 
@@ -88,6 +90,15 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
           placeholder="Confirm Password"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder='Phone Number'
+          value={phoneNumber}
+          onChangeText={setPhoneNumber}
+          keyboardType='phone-pad'
+          autoCapitalize='none'
+          maxLength={10}
         />
 
         <TouchableOpacity

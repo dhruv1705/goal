@@ -1,4 +1,6 @@
-const DarkThemes = {
+import { Theme } from '@react-navigation/native';
+
+const DarkThemes: Theme = {
     dark: true,
     colors: {
         primary: '#7C3AED',

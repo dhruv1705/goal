@@ -33,18 +33,26 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-otp', {
-        body: { phoneNumber: phoneNumber },
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const response = await fetch(`https://ebdvpahpuefimdcfuvru.supabase.co/functions/v1/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViZHZwYWhwdWVmaW1kY2Z1dnJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMjM5NTMsImV4cCI6MjA2Njc5OTk1M30.8V52GocdThP5StIJ5ImZL3PwXPD8QWkJsj465QA2vI4'}`,
+        },
+        body: JSON.stringify({ phoneNumber: phoneNumber }),
       });
 
-      if (error) {
-        console.error('Error sending OTP:', error);
-        Alert.alert('Error', error.message || 'Failed to send OTP.');
-      } else if (data && data.otp) {
+      const data = await response.json();
+
+      if (response.ok) {
         Alert.alert('Success', 'OTP sent successfully!');
         navigation.navigate('OtpVerification', { phoneNumber: phoneNumber }); 
       } else {
-        Alert.alert('Error', 'Failed to send OTP: Unexpected response from server.');
+        console.error('Error sending OTP:', data);
+        Alert.alert('Error', data.error || 'Failed to send OTP.');
       }
     } catch (error: any) {
       console.error('Network error sending OTP:', error);

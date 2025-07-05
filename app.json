@@ -14,8 +14,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.dhruv2050.goaltrackerpro"
+      "supportsTablet": true
     },
     "android": {
       "package": "com.dhruv2050.goaltrackerpro",
@@ -35,9 +34,8 @@
     },
     "extra": {
       "eas": {
-        "projectId": "fd76931d-4cb0-4985-8e6f-265dab018e83"
+        "projectId": "4983e783-735e-4862-8486-d444431ce158"
       }
-    },
-    "owner": "zolatte"
+    }
   }
 }

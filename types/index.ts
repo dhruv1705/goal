@@ -10,9 +10,10 @@ export type RootStackParamList = {
   Schedule: undefined;
   AddEdit: undefined; 
   Profile: undefined;
-  Goals: undefined;
+  Goals: { refresh?: number; updatedGoal?: Goal; newGoal?: Goal; };
   AddEditGoal: { goalId?: string }; 
   GoalDetail: { goal: Goal }; 
   Feedback: undefined;
   Onboarding: { onComplete: () => void };
+  Talk: undefined;
 }; 

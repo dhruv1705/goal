@@ -46,10 +46,8 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
     fetchGoals()
   }, [activeFilter, categoryFilter])
 
-  // Listen for navigation params to trigger refresh and handle optimistic updates
   useEffect(() => {
     if (route?.params?.refresh) {
-      // Handle optimistic updates first for immediate UI response
       if (route.params?.newGoal) {
         setGoals(prevGoals => [route.params.newGoal!, ...prevGoals])
       } else if (route.params?.updatedGoal) {
@@ -59,20 +57,17 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation, route }) =
           )
         )
       }
-      
-      // Then fetch from server to ensure consistency
+
       setTimeout(() => {
         fetchGoals()
       }, 100)
     }
     
-    // Handle category filter changes
     if (route?.params?.categoryFilter !== undefined) {
       setCategoryFilter(route.params.categoryFilter)
     }
   }, [route?.params?.refresh, route?.params?.categoryFilter])
 
-  // Refresh goals when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       fetchGoals()
@@ -905,7 +900,6 @@ const styles = StyleSheet.create({
     left: 6,
   },
 
-  // Personal Icon - Star
   personalIcon: {
     width: 20,
     height: 20,

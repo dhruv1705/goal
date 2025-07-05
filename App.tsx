@@ -19,13 +19,13 @@ import { HomeScreen } from './screens/HomeScreen'
 import { CategoriesScreen } from './screens/CategoriesScreen'
 import OtpVerificationScreen from './screens/OtpVerificationScreen' 
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native'
-import DarkThemes from './theme/DarkThemes'
-import LightTheme from './theme/LightTheme'
+import DarkThemes from './theme/DarkThemes.ts'
+import LightTheme from './theme/LightTheme.ts'
 import {AppContext, AppContextProvider} from './theme/AppContext'
 import { RootStackParamList } from './types' 
 import { usePushNotifications } from './notification/notification'
 import { TalkScreen } from './screens/TalkScreen'
-const Stack = createStackNavigator()
+const Stack = createStackNavigator<RootStackParamList>()
 
 const AuthStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -135,12 +135,12 @@ const AppContent = () => {
             <>
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="SignUp" component={SignUpScreen} />
-              <Stack.Screen 
-                name="OtpVerification" 
-                children={({ navigation, route }: StackScreenProps<RootStackParamList, 'OtpVerification'>) => (
-                  <OtpVerificationScreen navigation={navigation} route={route} />
-                )}
-              />
+              <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
+            </>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </>
   )
 }
 

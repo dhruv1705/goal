@@ -9,24 +9,18 @@ import {
   StatusBar,
   ScrollView,
   Platform,
+  ActivityIndicator,
 } from 'react-native'
 import { useTheme } from '@react-navigation/native'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { supabase } from '../lib/supabase'
+import { StackNavigationProp, StackScreenProps } from '@react-navigation/stack' 
+import { RootStackParamList } from '../types' 
 import { Tables } from '../types/supabase'
 
 type Goal = Tables<'goals'>
-
-interface AddEditGoalScreenProps {
-  navigation: any
-  route?: {
-    params?: {
-      goal?: Goal
-    }
-  }
-}
 
 const categories = ['Physical Health', 'Mental Health', 'Finance', 'Social']
 
@@ -34,14 +28,57 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
   const { colors } = useTheme()
   const { user } = useAuth()
   const { primaryCategory, getOrderedCategories } = usePreferences()
-  const goal = route?.params?.goal
-  const isEditing = !!goal
+  const goalId = route?.params?.goalId 
+  
+  const [goal, setGoal] = useState<Goal | null>(null)
+
+  const isEditing = !!goalId 
 
   const getDefaultCategory = () => {
     if (goal?.category) return goal.category 
     if (primaryCategory) return primaryCategory 
     return 'Physical Health' 
   }
+
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [category, setCategory] = useState(getDefaultCategory())
+  const [targetDate, setTargetDate] = useState<Date | null>(null)
+  const [status, setStatus] = useState<'active' | 'completed' | 'paused'>('active')
+  const [loading, setLoading] = useState(true) // Set to true initially to indicate loading goal data
+  const [showDatePicker, setShowDatePicker] = useState(false)
+
+  useEffect(() => {
+    const fetchGoal = async () => {
+      if (goalId) {
+        setLoading(true)
+        const { data, error } = await supabase
+          .from('goals')
+          .select('*')
+          .eq('id', goalId)
+          .single()
+
+        if (error) {
+          console.error('Error fetching goal:', error)
+          Alert.alert('Error', 'Failed to load goal data.')
+          setLoading(false)
+          return
+        }
+
+        if (data) {
+          setGoal(data)
+          setTitle(data.title || '')
+          setDescription(data.description || '')
+          setCategory(data.category || 'Physical Health')
+          setTargetDate(data.target_date ? new Date(data.target_date) : null)
+          setStatus(data.status || 'active')
+        }
+      }
+      setLoading(false)
+    }
+
+    fetchGoal()
+  }, [goalId]) 
 
   useEffect(() => {
     console.log('AddEditGoalScreen - User info:', {
@@ -51,15 +88,7 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
       primaryCategory,
       defaultCategory: getDefaultCategory()
     })
-  }, [user, primaryCategory])
-
-  const [title, setTitle] = useState(goal?.title || '')
-  const [description, setDescription] = useState(goal?.description || '')
-  const [category, setCategory] = useState(getDefaultCategory())
-  const [targetDate, setTargetDate] = useState(goal?.target_date ? new Date(goal.target_date) : null)
-  const [status, setStatus] = useState(goal?.status || 'active')
-  const [loading, setLoading] = useState(false)
-  const [showDatePicker, setShowDatePicker] = useState(false)
+  }, [user, primaryCategory, goal]) 
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -90,7 +119,7 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
         const { data, error } = await supabase
           .from('goals')
           .update(goalData)
-          .eq('id', goal.id)
+          .eq('id', goalId!)
           .select()
 
         if (error) {
@@ -131,7 +160,7 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
   }
 
   const handleDelete = async () => {
-    if (!isEditing) return
+    if (!isEditing || !goalId) return
 
     Alert.alert(
       'Delete Goal',
@@ -147,12 +176,12 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
               await supabase
                 .from('schedules')
                 .delete()
-                .eq('goal_id', goal.id)
+                .eq('goal_id', goalId)
 
               const { error } = await supabase
                 .from('goals')
                 .delete()
-                .eq('id', goal.id)
+                .eq('id', goalId)
 
               if (error) throw error
               
@@ -233,6 +262,15 @@ export const AddEditGoalScreen: React.FC<AddEditGoalScreenProps> = ({ navigation
           </View>
         )
     }
+  }
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ color: colors.text, marginTop: 10 }}>Loading goal...</Text>
+      </View>
+    )
   }
 
   return (
